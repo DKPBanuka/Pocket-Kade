@@ -35,7 +35,7 @@ interface SupplierListProps {
 function DeleteDialog({ supplier, deleteSupplier, asChild, children }: { supplier: Supplier; deleteSupplier: (id: string) => void; asChild?: boolean; children: React.ReactNode; }) {
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild={asChild}>
+      <AlertDialogTrigger asChild={asChild} onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
         {children}
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -81,13 +81,13 @@ export default function SupplierList({ suppliers, deleteSupplier }: SupplierList
           </TableHeader>
           <TableBody>
             {suppliers.map((supplier) => (
-              <TableRow key={supplier.id}>
+              <TableRow key={supplier.id} className="cursor-pointer" onClick={() => window.location.href = `/suppliers/${supplier.id}`}>
                 <TableCell className="font-medium">{supplier.name}</TableCell>
                 <TableCell>{supplier.contactPerson}</TableCell>
                 <TableCell>{supplier.phone}</TableCell>
                 <TableCell>{supplier.email}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Link href={`/suppliers/${supplier.id}/edit`} passHref>
+                  <Link href={`/suppliers/${supplier.id}/edit`} passHref onClick={(e) => e.stopPropagation()}>
                     <Button variant="outline" size="icon">
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit Supplier</span>
@@ -109,29 +109,31 @@ export default function SupplierList({ suppliers, deleteSupplier }: SupplierList
       {/* Mobile View: Cards */}
       <div className="md:hidden space-y-4">
         {suppliers.map((supplier) => (
-          <Card key={supplier.id} className="bg-white">
-            <CardHeader>
-              <CardTitle>{supplier.name}</CardTitle>
-              <CardDescription>{supplier.contactPerson}</CardDescription>
-            </CardHeader>
-            <CardContent className="text-sm">
-              {supplier.phone && <p>{supplier.phone}</p>}
-              {supplier.email && <p className="text-muted-foreground">{supplier.email}</p>}
-            </CardContent>
-            <Separator />
-            <CardFooter className="p-2 justify-end space-x-2">
-              <Link href={`/suppliers/${supplier.id}/edit`} passHref>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-2 h-4 w-4" /> Edit
-                </Button>
-              </Link>
-              <DeleteDialog supplier={supplier} deleteSupplier={deleteSupplier} asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </Button>
-              </DeleteDialog>
-            </CardFooter>
-          </Card>
+          <Link href={`/suppliers/${supplier.id}`} key={supplier.id} className="group block">
+            <Card className="transition-shadow hover:shadow-md">
+              <CardHeader>
+                <CardTitle>{supplier.name}</CardTitle>
+                <CardDescription>{supplier.contactPerson}</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm">
+                {supplier.phone && <p>{supplier.phone}</p>}
+                {supplier.email && <p className="text-muted-foreground">{supplier.email}</p>}
+              </CardContent>
+              <Separator />
+              <CardFooter className="p-2 justify-end space-x-2">
+                <Link href={`/suppliers/${supplier.id}/edit`} passHref onClick={(e) => e.stopPropagation()}>
+                  <Button variant="outline" size="sm">
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                </Link>
+                <DeleteDialog supplier={supplier} deleteSupplier={deleteSupplier} asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </Button>
+                </DeleteDialog>
+              </CardFooter>
+            </Card>
+          </Link>
         ))}
       </div>
     </>

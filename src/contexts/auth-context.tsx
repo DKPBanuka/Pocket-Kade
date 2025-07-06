@@ -3,35 +3,47 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import type { AuthUser, UserRole } from '@/lib/types';
+import type { AuthUser, UserRole, Organization } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 interface AuthContextType {
   user: AuthUser | null;
+  organization: Organization | null;
   isLoading: boolean;
   signOut: () => void;
-  // TODO: Add a function to switch tenants
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  organization: null,
   isLoading: true,
   signOut: () => {},
 });
 
-const unprotectedRoutes = ['/login', '/signup'];
+const unprotectedRoutes = ['/login', '/signup', '/accept-invitation'];
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    let orgUnsubscribe: (() => void) | null = null;
+
+    const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      // Clean up previous org listener on user change
+      if (orgUnsubscribe) {
+        orgUnsubscribe();
+        orgUnsubscribe = null;
+      }
+      
+      setIsLoading(true);
+
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -40,123 +52,137 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userData = userDocSnap.data();
           const tenants = userData.tenants || {};
           const tenantIds = Object.keys(tenants);
+          let activeTenantId = tenantIds.length > 0 ? tenantIds[0] : null;
 
-          if (tenantIds.length === 0) {
-            // This is a legacy user without a tenant. Let's create one for them.
-            const batch = writeBatch(db);
+          const currentUser: AuthUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            username: userData.username,
+            tenants: tenants,
+            activeTenantId: activeTenantId,
+            activeRole: activeTenantId ? tenants[activeTenantId] : null,
+            onboardingCompleted: userData.onboardingCompleted || false,
+          };
+          setUser(currentUser);
 
-            // 1. Create a new organization for the user
-            const orgRef = doc(collection(db, 'organizations'));
-            const orgName = `${userData.username}'s Workspace`;
-            batch.set(orgRef, {
-                name: orgName,
-                ownerUid: firebaseUser.uid,
-                createdAt: serverTimestamp(),
+          if (currentUser.activeTenantId) {
+            const orgDocRef = doc(db, 'organizations', currentUser.activeTenantId);
+            orgUnsubscribe = onSnapshot(orgDocRef, (orgDocSnap) => {
+                if (orgDocSnap.exists()) {
+                    setOrganization({ id: orgDocSnap.id, ...orgDocSnap.data() } as Organization);
+                } else {
+                    setOrganization(null);
+                }
+                setIsLoading(false);
+            }, (error) => {
+                console.error("Error listening to organization:", error);
+                setOrganization(null);
+                setIsLoading(false);
             });
-            const tenantId = orgRef.id;
-
-            // 2. Update the user's document with the new tenant and 'owner' role
-            const roleForMigratedUser: UserRole = 'owner';
-            batch.update(userDocRef, {
-                tenants: {
-                    [tenantId]: roleForMigratedUser,
-                },
-            });
-            
-            await batch.commit();
-
-            // 3. Set the user state in the app with the newly created tenant info
-            setUser({
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                username: userData.username,
-                tenants: { [tenantId]: roleForMigratedUser },
-                activeTenantId: tenantId,
-                activeRole: roleForMigratedUser,
-            });
-
           } else {
-            // This is a regular user with one or more tenants.
-            let activeTenantId: string | null = null;
-            let activeRole: UserRole | null = null;
-            
-            // Auto-select the first tenant if one exists
-            if (tenantIds.length > 0) {
-                activeTenantId = tenantIds[0];
-                activeRole = tenants[activeTenantId];
-            }
-
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              username: userData.username || firebaseUser.email?.split('@')[0] || `user_${firebaseUser.uid.substring(0,5)}`,
-              tenants: tenants,
-              activeTenantId: activeTenantId,
-              activeRole: activeRole,
-            });
+            setOrganization(null);
+            setIsLoading(false);
           }
         } else {
-          // User exists in Auth but not in Firestore. This is expected during
-          // the signup process while the user document is being created.
-          // We set the user to null and let the signup page complete its logic.
-          // On the next login, the document will exist.
           setUser(null);
+          setOrganization(null);
+          setIsLoading(false);
         }
       } else {
         setUser(null);
+        setOrganization(null);
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+        authUnsubscribe();
+        if (orgUnsubscribe) {
+            orgUnsubscribe();
+        }
+    };
   }, []);
 
   useEffect(() => {
-      if (!isLoading) {
-        const isProtectedRoute = !unprotectedRoutes.includes(pathname);
-        if (!user && isProtectedRoute) {
-          router.push('/login');
-        }
-        if (user && unprotectedRoutes.includes(pathname)) {
-          router.push('/');
-        }
-        
-        // Role-based route protection
-        if (user && user.activeRole === 'staff') {
-            const staffForbiddenRoutes = ['/users', '/reports', '/suppliers'];
-            if (staffForbiddenRoutes.some(route => pathname.startsWith(route))) {
-                 router.push('/');
-            }
-        }
-      }
-  }, [user, isLoading, pathname, router]);
+    if (isLoading) {
+      return;
+    }
+    
+    const isOnboardingRoute = pathname.startsWith('/setup');
+    const isProtectedRoute = !unprotectedRoutes.some(route => pathname.startsWith(route)) && !isOnboardingRoute;
 
+    if (!user) {
+      if (isProtectedRoute) {
+        router.push('/login');
+      }
+      return;
+    }
+
+    if (unprotectedRoutes.some(route => pathname.startsWith(route))) {
+      router.push('/');
+      return;
+    }
+
+    // Onboarding redirection logic
+    if (!user.onboardingCompleted && !isOnboardingRoute) {
+      router.push('/setup/welcome');
+      return;
+    }
+
+    if (user.onboardingCompleted && user.activeRole !== 'staff' && organization && !organization.onboardingCompleted && !isOnboardingRoute) {
+      router.push('/setup/details');
+      return;
+    }
+    
+    if ((organization?.onboardingCompleted || user.activeRole === 'staff') && user.onboardingCompleted && isOnboardingRoute) {
+        router.push('/');
+        return;
+    }
+
+    // Role-based route protection
+    if (pathname.startsWith('/users') && user.activeRole !== 'owner') {
+      router.push('/');
+    }
+    if (pathname.startsWith('/reports') && user.activeRole === 'staff') {
+        router.push('/');
+    }
+    if (pathname.startsWith('/suppliers') && user.activeRole === 'staff') {
+        router.push('/');
+    }
+    // Staff can't edit inventory items
+    if (pathname.match(/^\/inventory\/.+\/edit$/) && user.activeRole === 'staff') {
+        router.push('/inventory');
+    }
+    // Staff can only create expenses, not view the list or edit
+     if (pathname.startsWith('/expenses') && user.activeRole === 'staff' && !pathname.endsWith('/new')) {
+        router.push('/expenses/new');
+    }
+
+  }, [user, organization, isLoading, pathname, router]);
 
   const handleSignOut = async () => {
     await signOut(auth);
     setUser(null);
+    setOrganization(null);
     router.push('/login');
   };
 
+  const FullScreenLoader = () => (
+    <div className="flex h-screen w-full items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+
   if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <FullScreenLoader />;
   }
   
-  // To avoid flicker on protected routes before redirect
-  if (!user && !unprotectedRoutes.includes(pathname)) {
-     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (!user && !unprotectedRoutes.some(route => pathname.startsWith(route)) && !pathname.startsWith('/setup')) {
+     return <FullScreenLoader />;
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signOut: handleSignOut }}>
+    <AuthContext.Provider value={{ user, organization, isLoading, signOut: handleSignOut }}>
       {children}
     </AuthContext.Provider>
   );

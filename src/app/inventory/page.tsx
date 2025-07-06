@@ -20,10 +20,12 @@ import type { ItemStatus } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { format } from 'date-fns';
 import { exportToCsv } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function InventoryPage() {
   const { inventory, isLoading: inventoryLoading, deleteInventoryItem } = useInventory();
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ItemStatus | 'All'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -118,22 +120,22 @@ export default function InventoryPage() {
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Inventory
+            {t('inventory.title')}
           </h1>
           <p className="text-muted-foreground">
-            {totalItemTypes} total item types, with {totalStockQuantity} units in stock.
+            {t('inventory.desc', { itemCount: totalItemTypes, unitCount: totalStockQuantity })}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                {t('inventory.export')}
             </Button>
             {isPrivilegedUser && (
                 <Link href="/reports" passHref>
                     <Button variant="outline">
                         <LineChart className="mr-2 h-4 w-4" />
-                        Stock Analysis
+                        {t('inventory.analysis')}
                     </Button>
                 </Link>
             )}
@@ -141,7 +143,7 @@ export default function InventoryPage() {
                 <Link href="/inventory/new" passHref>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    New Item
+                    {t('inventory.new_item')}
                 </Button>
                 </Link>
             )}
@@ -155,55 +157,55 @@ export default function InventoryPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                 type="text"
-                placeholder="Search by name, brand, category..."
-                className="w-full bg-white py-3 pl-10 pr-4 shadow-sm"
+                placeholder={t('inventory.search_placeholder')}
+                className="w-full py-3 pl-10 pr-4 shadow-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
              <Select onValueChange={(value) => setBrandFilter(value)} defaultValue="All">
-                <SelectTrigger className="bg-white shadow-sm">
-                    <SelectValue placeholder="Filter by brand" />
+                <SelectTrigger className="shadow-sm">
+                    <SelectValue placeholder={t('inventory.filter_brand')} />
                 </SelectTrigger>
                 <SelectContent>
                     {uniqueBrands.map(brand => <SelectItem key={brand} value={brand}>{brand}</SelectItem>)}
                 </SelectContent>
             </Select>
              <Select onValueChange={(value) => setCategoryFilter(value)} defaultValue="All">
-                <SelectTrigger className="bg-white shadow-sm">
-                    <SelectValue placeholder="Filter by category" />
+                <SelectTrigger className="shadow-sm">
+                    <SelectValue placeholder={t('inventory.filter_category')} />
                 </SelectTrigger>
                 <SelectContent>
                     {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                 </SelectContent>
             </Select>
              <Select onValueChange={(value) => setStatusFilter(value as ItemStatus | 'All')} defaultValue="All">
-                <SelectTrigger className="bg-white shadow-sm">
-                    <SelectValue placeholder="Filter by status" />
+                <SelectTrigger className="shadow-sm">
+                    <SelectValue placeholder={t('inventory.filter_status')} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="All">All Statuses</SelectItem>
-                    <SelectItem value="Available">Available</SelectItem>
-                    <SelectItem value="Awaiting Inspection">Awaiting Inspection</SelectItem>
-                    <SelectItem value="Damaged">Damaged</SelectItem>
-                    <SelectItem value="For Repair">For Repair</SelectItem>
+                    <SelectItem value="All">{t('inventory.status.all')}</SelectItem>
+                    <SelectItem value="Available">{t('inventory.status.available')}</SelectItem>
+                    <SelectItem value="Awaiting Inspection">{t('inventory.status.awaiting_inspection')}</SelectItem>
+                    <SelectItem value="Damaged">{t('inventory.status.damaged')}</SelectItem>
+                    <SelectItem value="For Repair">{t('inventory.status.for_repair')}</SelectItem>
                 </SelectContent>
             </Select>
           </div>
           <InventoryList inventory={filteredInventory} deleteInventoryItem={deleteInventoryItem} />
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-white/50 p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
           <Archive className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">No items in inventory</h3>
+          <h3 className="mt-4 text-xl font-semibold font-headline">{t('inventory.no_items_title')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            {isPrivilegedUser ? "Get started by adding your first item." : "No inventory items to display."}
+            {isPrivilegedUser ? t('inventory.no_items_desc_privileged') : t('inventory.no_items_desc_staff')}
           </p>
           {isPrivilegedUser && (
             <Link href="/inventory/new" passHref>
                 <Button className="mt-6">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Item
+                {t('inventory.add_item_btn')}
                 </Button>
             </Link>
           )}

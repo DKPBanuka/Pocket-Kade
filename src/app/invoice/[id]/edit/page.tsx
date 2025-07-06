@@ -8,12 +8,14 @@ import InvoiceForm from '@/components/invoice-form';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import type { Invoice } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function EditInvoicePage() {
   const router = useRouter();
   const params = useParams();
   const { getInvoice, isLoading } = useInvoices();
   const [invoice, setInvoice] = useState<Invoice | undefined>(undefined);
+  const { t } = useLanguage();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -42,15 +44,15 @@ export default function EditInvoicePage() {
        <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">
-              Edit Invoice {invoice.id}
+              {t('invoice.edit.title', { invoiceId: invoice.id })}
             </h1>
             <p className="text-muted-foreground">
-              Update the details for your invoice.
+              {t('invoice.edit.desc')}
             </p>
         </div>
         <Button variant="outline" onClick={() => router.back()}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t('general.back')}
         </Button>
       </div>
       <InvoiceForm invoice={invoice} />

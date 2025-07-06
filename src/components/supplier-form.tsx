@@ -77,7 +77,7 @@ export default function SupplierForm({ supplier, onFinished }: SupplierFormProps
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card className="bg-white">
+        <Card>
           <CardContent className="p-6 grid gap-4 md:grid-cols-2">
             <FormField
               control={form.control}

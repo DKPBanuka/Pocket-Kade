@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { Invoice, InvoiceStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { exportToCsv } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 
 const calculateTotal = (invoice: Invoice): number => {
   const subtotal = invoice.lineItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
@@ -35,6 +36,7 @@ export default function InvoicesPage() {
   const { invoices, isLoading: invoicesLoading } = useInvoices();
   const { inventory, isLoading: inventoryLoading } = useInventory();
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'All'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -118,21 +120,21 @@ export default function InvoicesPage() {
        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">
-              All Invoices
+              {t('invoices.title')}
             </h1>
             <p className="text-muted-foreground">
-              Browse and manage all your invoices.
+              {t('invoices.desc')}
             </p>
           </div>
           <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleExport}>
                   <Download className="mr-2 h-4 w-4" />
-                  Export
+                  {t('invoices.export')}
               </Button>
               <Link href="/invoice/new" passHref>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  New Invoice
+                  {t('invoices.new')}
                 </Button>
               </Link>
           </div>
@@ -145,26 +147,26 @@ export default function InvoicesPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                 type="text"
-                placeholder="Search by customer, invoice #, or phone"
-                className="w-full bg-white py-3 pl-10 pr-4 shadow-sm"
+                placeholder={t('invoices.search_placeholder')}
+                className="w-full py-3 pl-10 pr-4 shadow-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
             <Select onValueChange={(value) => setStatusFilter(value as InvoiceStatus | 'All')} defaultValue="All">
-                <SelectTrigger className="bg-white shadow-sm">
-                    <SelectValue placeholder="Filter by status" />
+                <SelectTrigger className="shadow-sm">
+                    <SelectValue placeholder={t('invoices.filter_status')} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="All">All Statuses</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
-                    <SelectItem value="Partially Paid">Partially Paid</SelectItem>
-                    <SelectItem value="Unpaid">Unpaid</SelectItem>
+                    <SelectItem value="All">{t('invoices.status.all')}</SelectItem>
+                    <SelectItem value="Paid">{t('invoices.status.paid')}</SelectItem>
+                    <SelectItem value="Partially Paid">{t('invoices.status.partially_paid')}</SelectItem>
+                    <SelectItem value="Unpaid">{t('invoices.status.unpaid')}</SelectItem>
                 </SelectContent>
             </Select>
             <Select onValueChange={(value) => setCategoryFilter(value)} defaultValue="All">
-                <SelectTrigger className="bg-white shadow-sm">
-                    <SelectValue placeholder="Filter by category" />
+                <SelectTrigger className="shadow-sm">
+                    <SelectValue placeholder={t('invoices.filter_category')} />
                 </SelectTrigger>
                 <SelectContent>
                      {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -174,16 +176,16 @@ export default function InvoicesPage() {
           <InvoiceList invoices={filteredInvoices} />
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-white/50 p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
           <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">No active invoices</h3>
+          <h3 className="mt-4 text-xl font-semibold font-headline">{t('invoices.no_invoices_title')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Get started by creating your first invoice.
+            {t('invoices.no_invoices_desc')}
           </p>
           <Link href="/invoice/new" passHref>
             <Button className="mt-6">
               <Plus className="mr-2 h-4 w-4" />
-              Create Invoice
+              {t('invoices.create_invoice_btn')}
             </Button>
           </Link>
         </div>

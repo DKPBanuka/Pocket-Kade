@@ -13,6 +13,7 @@ import type { InventoryItem, Invoice } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
+import { useLanguage } from '@/contexts/language-context';
 
 const formatCurrency = (amount: number) => `Rs.${amount.toFixed(2)}`;
 
@@ -26,6 +27,7 @@ interface ProductPerformanceData {
 }
 
 function ProductPerformanceReport({ inventory, invoices }: { inventory: InventoryItem[], invoices: Invoice[] }) {
+    const { t } = useLanguage();
     const productPerformanceData: ProductPerformanceData[] = useMemo(() => {
         const performanceMap: { [key: string]: ProductPerformanceData } = {};
 
@@ -66,15 +68,15 @@ function ProductPerformanceReport({ inventory, invoices }: { inventory: Inventor
     }, [productPerformanceData]);
     
     const chartConfig = {
-        revenue: { label: "Revenue", color: "hsl(var(--primary))" },
+        revenue: { label: t('analysis.product.table.revenue'), color: "hsl(var(--primary))" },
     };
 
     return (
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Top 10 Products by Revenue</CardTitle>
-                    <CardDescription>A look at your most profitable items.</CardDescription>
+                    <CardTitle>{t('analysis.product.top_10_title')}</CardTitle>
+                    <CardDescription>{t('analysis.product.top_10_desc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[350px] w-full">
@@ -90,19 +92,19 @@ function ProductPerformanceReport({ inventory, invoices }: { inventory: Inventor
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle>Full Product Performance Breakdown</CardTitle>
-                    <CardDescription>Detailed sales data for every product in your inventory.</CardDescription>
+                    <CardTitle>{t('analysis.product.breakdown_title')}</CardTitle>
+                    <CardDescription>{t('analysis.product.breakdown_desc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Product</TableHead>
-                                    <TableHead className="text-right">Units Sold</TableHead>
-                                    <TableHead className="text-right">Total Revenue</TableHead>
-                                    <TableHead className="text-right">Total Cost</TableHead>
-                                    <TableHead className="text-right">Total Profit</TableHead>
+                                    <TableHead>{t('analysis.product.table.product')}</TableHead>
+                                    <TableHead className="text-right">{t('analysis.product.table.units_sold')}</TableHead>
+                                    <TableHead className="text-right">{t('analysis.product.table.revenue')}</TableHead>
+                                    <TableHead className="text-right">{t('analysis.product.table.cost')}</TableHead>
+                                    <TableHead className="text-right">{t('analysis.product.table.profit')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -129,6 +131,7 @@ export default function ProductPerformancePage() {
     const { inventory, isLoading: inventoryLoading } = useInventory();
     const { user, isLoading: authLoading } = useAuth();
     const { invoices, isLoading: invoicesLoading } = useInvoices();
+    const { t } = useLanguage();
 
     const isLoading = inventoryLoading || authLoading || invoicesLoading;
 
@@ -147,15 +150,15 @@ export default function ProductPerformancePage() {
             <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">
-                    Product Performance
+                    {t('analysis.product.title')}
                 </h1>
                 <p className="text-muted-foreground">
-                    Analyze which products are driving your business.
+                    {t('analysis.product.desc')}
                 </p>
                 </div>
                 <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('general.back')}
                 </Button>
             </div>
             <ProductPerformanceReport inventory={inventory} invoices={invoices} />

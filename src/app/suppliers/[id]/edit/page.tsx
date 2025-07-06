@@ -20,12 +20,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from '@/contexts/auth-context';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function EditSupplierPage() {
   const router = useRouter();
   const params = useParams();
   const { getSupplier, isLoading: suppliersLoading, deleteSupplier } = useSuppliers();
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [supplier, setSupplier] = useState<Supplier | undefined>(undefined);
 
   const isLoading = suppliersLoading || authLoading;
@@ -69,34 +71,34 @@ export default function EditSupplierPage() {
        <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">
-              Edit Supplier
+              {t('supplier.edit.title')}
             </h1>
             <p className="text-muted-foreground">
-              Update the details for '{supplier.name}'.
+              {t('supplier.edit.desc', { supplierName: supplier.name })}
             </p>
         </div>
         <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('general.back')}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  <Trash2 className="mr-2 h-4 w-4" /> {t('customers.edit.delete')}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('customers.edit.delete_confirm_title')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the supplier '{supplier.name}' from your database.
+                    {t('supplier.edit.delete_confirm_desc', { supplierName: supplier.name })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                    Delete
+                    {t('customers.edit.delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

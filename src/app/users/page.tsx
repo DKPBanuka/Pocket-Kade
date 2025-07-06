@@ -9,21 +9,24 @@ import { Loader2, Plus } from "lucide-react";
 import UserList from "@/components/user-list";
 import { AddUserDialog } from "@/components/add-user-dialog";
 import { useEffect } from "react";
+import { useLanguage } from "@/contexts/language-context";
 
 export default function UsersPage() {
     const router = useRouter();
     const { user, isLoading: authLoading } = useAuth();
-    const { users, isLoading: usersLoading } = useUsers();
+    const { users, isLoading: usersLoading, changeUserRole, removeUserFromTenant } = useUsers();
+    const { t } = useLanguage();
 
     const isLoading = authLoading || usersLoading;
 
     useEffect(() => {
-      if (!authLoading && user?.activeRole === 'staff') {
+      // Redirection logic is now primarily handled by AuthContext
+      if (!authLoading && user?.activeRole !== 'owner') {
         router.push('/');
       }
     }, [user, authLoading, router]);
 
-    if (isLoading || !user || user.activeRole === 'staff') {
+    if (isLoading || !user || user.activeRole !== 'owner') {
         return (
             <div className="flex justify-center items-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -36,27 +39,26 @@ export default function UsersPage() {
             <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">
-                    User Management
+                    {t('users.title')}
                 </h1>
                 <p className="text-muted-foreground">
-                    Add and manage user accounts for your team.
+                    {t('users.desc')}
                 </p>
                 </div>
                 <AddUserDialog>
                     <Button>
                         <Plus className="mr-2 h-4 w-4" />
-                        Add User
+                        {t('users.add_user')}
                     </Button>
                 </AddUserDialog>
             </div>
 
-            {isLoading ? (
-                <div className="flex justify-center items-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-            ) : (
-                <UserList users={users} />
-            )}
+            <UserList 
+                users={users} 
+                currentUser={user}
+                changeUserRole={changeUserRole}
+                removeUserFromTenant={removeUserFromTenant}
+            />
         </div>
     );
 }

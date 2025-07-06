@@ -36,11 +36,13 @@ import CustomerSelector from './customer-selector';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { suggestLineItemAction } from '@/app/actions';
+import { useLanguage } from '@/contexts/language-context';
 
 
 function ProductSelector({ form, index, availableInventory }: { form: any; index: number; availableInventory: InventoryItem[] }) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { t } = useLanguage();
 
   const selectedDescription = form.watch(`lineItems.${index}.description`);
 
@@ -73,7 +75,7 @@ function ProductSelector({ form, index, availableInventory }: { form: any; index
               !selectedDescription && "text-muted-foreground"
             )}
           >
-            {selectedDescription || "Select a product"}
+            {selectedDescription || t('invoice.form.select_product')}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </FormControl>
@@ -81,7 +83,7 @@ function ProductSelector({ form, index, availableInventory }: { form: any; index
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <div className="p-2">
             <Input 
-                placeholder="Search products..."
+                placeholder={t('invoice.form.search_products')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 autoFocus
@@ -98,13 +100,13 @@ function ProductSelector({ form, index, availableInventory }: { form: any; index
               >
                 <div className="flex flex-col items-start text-left">
                   <span>{item.name}</span>
-                  <span className="text-xs text-muted-foreground">{item.quantity} in stock</span>
+                  <span className="text-xs text-muted-foreground">{t('invoice.form.in_stock', { count: item.quantity })}</span>
                 </div>
               </Button>
             ))
           ) : (
             <div className="p-4 text-sm text-center text-muted-foreground">
-              No items match your search.
+              {t('invoice.form.no_match')}
             </div>
           )}
         </div>
@@ -121,6 +123,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
   const { addInvoice, updateInvoice } = useInvoices();
   const { inventory } = useInventory();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isEditMode = !!invoice;
   const [categoryFilter, setCategoryFilter] = useState('All');
   
@@ -304,23 +307,23 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card className="bg-white">
+        <Card>
           <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
+            <CardTitle>{t('invoice.form.customer_info')}</CardTitle>
           </CardHeader>
           <CardContent className="p-6 pt-0">
              <CustomerSelector form={form}/>
           </CardContent>
         </Card>
 
-        <Card className="bg-white">
+        <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle>Line Items</CardTitle>
+                <CardTitle>{t('invoice.form.line_items')}</CardTitle>
                  <div className="w-full sm:w-auto sm:max-w-xs">
                      <Select onValueChange={setCategoryFilter} defaultValue={categoryFilter}>
                         <SelectTrigger>
-                            <SelectValue placeholder="Filter by category..." />
+                            <SelectValue placeholder={t('invoice.form.filter_category')} />
                         </SelectTrigger>
                         <SelectContent>
                             {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -344,7 +347,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                       name={`lineItems.${index}.type`}
                       render={({ field }) => (
                         <FormItem className="space-y-3">
-                          <FormLabel>Line Item Type</FormLabel>
+                          <FormLabel>{t('invoice.form.item_type')}</FormLabel>
                           <FormControl>
                             <RadioGroup
                               onValueChange={(value) => {
@@ -361,13 +364,13 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                 <FormControl>
                                   <RadioGroupItem value="product" />
                                 </FormControl>
-                                <FormLabel className="font-normal flex items-center gap-2"><Package className="h-4 w-4" /> Product</FormLabel>
+                                <FormLabel className="font-normal flex items-center gap-2"><Package className="h-4 w-4" /> {t('invoice.form.product')}</FormLabel>
                               </FormItem>
                               <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="service" />
                                 </FormControl>
-                                <FormLabel className="font-normal flex items-center gap-2"><Wrench className="h-4 w-4" /> Service</FormLabel>
+                                <FormLabel className="font-normal flex items-center gap-2"><Wrench className="h-4 w-4" /> {t('invoice.form.service')}</FormLabel>
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
@@ -378,7 +381,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                   </div>
                   
                   <div className="col-span-12 md:col-span-4">
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t('invoice.form.description')}</FormLabel>
                        {lineItemType === 'product' ? (
                         <ProductSelector form={form} index={index} availableInventory={availableInventory} />
                       ) : (
@@ -387,7 +390,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                           name={`lineItems.${index}.description`}
                           render={({ field }) => (
                             <FormControl>
-                              <Input placeholder="e.g. Headlight fitting charge" {...field} />
+                              <Input placeholder={t('invoice.form.service_placeholder')} {...field} />
                             </FormControl>
                           )}
                         />
@@ -396,7 +399,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                   </div>
 
                   <div className="col-span-6 md:col-span-2">
-                        <FormLabel>Quantity</FormLabel>
+                        <FormLabel>{t('invoice.form.qty')}</FormLabel>
                         <FormField
                         control={form.control}
                         name={`lineItems.${index}.quantity`}
@@ -409,7 +412,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                         <FormMessage className="mt-1">{form.formState.errors.lineItems?.[index]?.quantity?.message}</FormMessage>
                     </div>
                     <div className="col-span-6 md:col-span-2">
-                        <FormLabel>Price (Rs.)</FormLabel>
+                        <FormLabel>{t('invoice.form.price')}</FormLabel>
                         <FormField
                         control={form.control}
                         name={`lineItems.${index}.price`}
@@ -422,7 +425,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                         <FormMessage className="mt-1">{form.formState.errors.lineItems?.[index]?.price?.message}</FormMessage>
                     </div>
                     <div className="col-span-12 md:col-span-3">
-                        <FormLabel>Warranty</FormLabel>
+                        <FormLabel>{t('invoice.form.warranty')}</FormLabel>
                         <FormField
                             control={form.control}
                             name={`lineItems.${index}.warrantyPeriod`}
@@ -431,7 +434,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select warranty" />
+                                        <SelectValue placeholder={t('invoice.form.warranty_placeholder')} />
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -472,16 +475,16 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
               className="mt-6"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Line Item
+              {t('invoice.form.add_item')}
             </Button>
           </CardContent>
         </Card>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
-                <Card className="bg-white h-full">
+                <Card className="h-full">
                     <CardHeader>
-                      <CardTitle>Discount</CardTitle>
+                      <CardTitle>{t('invoice.form.discount_title')}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 pt-0 space-y-4">
                         <FormField
@@ -489,7 +492,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                             name="discountType"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Discount Type</FormLabel>
+                                    <FormLabel>{t('invoice.form.discount_type')}</FormLabel>
                                     <FormControl>
                                         <RadioGroup
                                             onValueChange={field.onChange}
@@ -499,11 +502,11 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                         >
                                             <FormItem className="flex items-center space-x-2 space-y-0">
                                                 <FormControl><RadioGroupItem value="percentage" id="percentage" /></FormControl>
-                                                <Label htmlFor="percentage" className="font-normal">Percentage (%)</Label>
+                                                <Label htmlFor="percentage" className="font-normal">{t('invoice.form.percentage')}</Label>
                                             </FormItem>
                                             <FormItem className="flex items-center space-x-2 space-y-0">
                                                 <FormControl><RadioGroupItem value="fixed" id="fixed" /></FormControl>
-                                                <Label htmlFor="fixed" className="font-normal">Fixed (Rs.)</Label>
+                                                <Label htmlFor="fixed" className="font-normal">{t('invoice.form.fixed')}</Label>
                                             </FormItem>
                                         </RadioGroup>
                                     </FormControl>
@@ -515,7 +518,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                             name="discountValue"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Discount Value</FormLabel>
+                                    <FormLabel>{t('invoice.form.discount_value')}</FormLabel>
                                     <FormControl>
                                         <Input 
                                             type="number" 
@@ -525,7 +528,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                             disabled={!isPrivilegedUser}
                                         />
                                     </FormControl>
-                                    {!isPrivilegedUser && <p className="text-xs text-muted-foreground mt-2">Discount can only be applied by an Admin or Owner.</p>}
+                                    {!isPrivilegedUser && <p className="text-xs text-muted-foreground mt-2">{t('invoice.form.discount_permission')}</p>}
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -533,8 +536,8 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                     </CardContent>
                 </Card>
             </div>
-            <div className="flex items-center justify-between rounded-lg bg-white p-6 shadow-sm md:flex-col md:items-end md:justify-center">
-            <p className="text-lg font-semibold font-headline">Total Amount</p>
+            <div className="flex items-center justify-between rounded-lg bg-card p-6 shadow-sm md:flex-col md:items-end md:justify-center">
+            <p className="text-lg font-semibold font-headline">{t('invoice.form.total_amount')}</p>
             <p className="text-2xl font-bold font-headline text-primary">
                 Rs.{totalAmount.toFixed(2)}
             </p>
@@ -542,21 +545,21 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
         </div>
 
         {isEditMode && invoice ? (
-            <Card className="bg-white">
+            <Card>
                 <CardHeader>
-                    <CardTitle>Invoice Status</CardTitle>
+                    <CardTitle>{t('invoice.form.status_title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                      <div className="flex items-center h-10">
                         <Badge>{invoice.status}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">Status is updated automatically based on payments.</p>
+                    <p className="text-xs text-muted-foreground mt-2">{t('invoice.form.status_desc')}</p>
                 </CardContent>
             </Card>
         ) : (
-             <Card className="bg-white">
+             <Card>
                 <CardHeader>
-                    <CardTitle>Initial Payment Status</CardTitle>
+                    <CardTitle>{t('invoice.form.initial_payment_title')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                      <FormField
@@ -564,7 +567,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                         name="status"
                         render={({ field }) => (
                             <FormItem className="space-y-3">
-                                <FormLabel>Select Initial Status</FormLabel>
+                                <FormLabel>{t('invoice.form.initial_status_label')}</FormLabel>
                                 <FormControl>
                                     <RadioGroup
                                     onValueChange={field.onChange}
@@ -576,7 +579,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                                 <RadioGroupItem value="Unpaid" id="unpaid" className="sr-only peer" />
                                             </FormControl>
                                             <Label htmlFor="unpaid" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                                                Unpaid
+                                                {t('invoices.status.unpaid')}
                                             </Label>
                                         </FormItem>
                                         <FormItem>
@@ -584,7 +587,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                                 <RadioGroupItem value="Paid" id="paid" className="sr-only peer" />
                                             </FormControl>
                                             <Label htmlFor="paid" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                                                Paid in Full
+                                                {t('invoice.form.paid_full')}
                                             </Label>
                                         </FormItem>
                                         <FormItem>
@@ -592,7 +595,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                                 <RadioGroupItem value="Partially Paid" id="partial" className="sr-only peer" />
                                             </FormControl>
                                             <Label htmlFor="partial" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                                                Partially Paid
+                                                {t('invoices.status.partially_paid')}
                                             </Label>
                                         </FormItem>
                                     </RadioGroup>
@@ -607,9 +610,9 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                             name="initialPayment"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Initial Payment Amount (Rs.)</FormLabel>
+                                <FormLabel>{t('invoice.form.initial_payment_amount')}</FormLabel>
                                 <FormControl>
-                                <Input type="number" step="0.01" placeholder="Enter amount paid" {...field} />
+                                <Input type="number" step="0.01" placeholder={t('invoice.form.initial_payment_placeholder')} {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -625,10 +628,10 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
           <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isEditMode ? 'Updating...' : 'Creating...'}
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isEditMode ? t('invoice.form.updating') : t('invoice.form.creating')}
               </>
             ) : (
-                isEditMode ? 'Update Invoice' : 'Create Invoice'
+                isEditMode ? t('invoice.form.update_btn') : t('invoice.form.create_btn')
             )}
           </Button>
         </div>

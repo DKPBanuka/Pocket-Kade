@@ -121,13 +121,14 @@ export function useInventory() {
         });
       }
       
-      const message = `${user.username} added a new item: ${itemData.name}.`;
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
       usersSnapshot.docs.forEach(userDoc => {
           if (userDoc.id !== user.uid) {
               const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
               batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username, message,
+                  recipientUid: userDoc.id, senderName: user.username, 
+                  messageKey: 'notifications.inventory.item_added', 
+                  messageParams: { user: user.username, item: itemData.name },
                   link: `/inventory`, read: false, createdAt: serverTimestamp(), type: 'inventory'
               });
           }
@@ -203,12 +204,13 @@ export function useInventory() {
         
         const newQuantity = currentItemData.quantity + addStock;
         if (newQuantity <= currentItemData.reorderPoint && currentItemData.quantity > currentItemData.reorderPoint) {
-            const message = `Low stock alert: ${currentItemData.name} has only ${newQuantity} items left.`;
             const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
             usersSnapshot.docs.forEach(userDoc => {
                 const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
                 batch.set(notificationRef, {
-                    recipientUid: userDoc.id, senderName: "System", message,
+                    recipientUid: userDoc.id, senderName: "System", 
+                    messageKey: 'notifications.inventory.low_stock',
+                    messageParams: { item: currentItemData.name, count: newQuantity },
                     link: `/inventory/${id}/edit`, read: false, createdAt: serverTimestamp(), type: 'low-stock'
                 });
             });
@@ -217,13 +219,14 @@ export function useInventory() {
       
       batch.update(itemDocRef, updatePayload);
       
-      const message = `${user.username} updated item ${updatedData.name || currentItemData.name}.`;
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
       usersSnapshot.docs.forEach(userDoc => {
           if (userDoc.id !== user.uid) {
               const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
               batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username, message,
+                  recipientUid: userDoc.id, senderName: user.username,
+                  messageKey: 'notifications.inventory.item_updated',
+                  messageParams: { user: user.username, item: updatedData.name || currentItemData.name },
                   link: `/inventory/${id}/edit`, read: false, createdAt: serverTimestamp(), type: 'inventory'
               });
           }
@@ -258,13 +261,14 @@ export function useInventory() {
       const batch = writeBatch(db);
       batch.delete(doc(db, INVENTORY_COLLECTION, id));
       
-      const message = `${user.username} deleted item: ${itemToDelete.name}.`;
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
       usersSnapshot.docs.forEach(userDoc => {
           if (userDoc.id !== user.uid) {
               const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
               batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username, message,
+                  recipientUid: userDoc.id, senderName: user.username,
+                  messageKey: 'notifications.inventory.item_deleted',
+                  messageParams: { user: user.username, item: itemToDelete.name },
                   link: `/inventory`, read: false, createdAt: serverTimestamp(), type: 'inventory'
               });
           }

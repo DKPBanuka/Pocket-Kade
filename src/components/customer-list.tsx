@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Separator } from './ui/separator';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 
 interface CustomerListProps {
   customers: Customer[];
@@ -34,22 +35,23 @@ interface CustomerListProps {
 }
 
 function DeleteDialog({ customer, deleteCustomer, asChild, children }: { customer: Customer; deleteCustomer: (id: string) => void; asChild?: boolean; children: React.ReactNode; }) {
+  const { t } = useLanguage();
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild={asChild} onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+      <AlertDialogTrigger asChild={asChild} onClick={(e) => { e.stopPropagation(); }}>
         {children}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>{t('customers.edit.delete_confirm_title')}</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete '{customer.name}'.
+            {t('customers.edit.delete_confirm_desc', { customerName: customer.name })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t('general.cancel')}</AlertDialogCancel>
           <AlertDialogAction onClick={() => deleteCustomer(customer.id)} className="bg-destructive hover:bg-destructive/90">
-            Delete
+            {t('general.delete')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -58,10 +60,11 @@ function DeleteDialog({ customer, deleteCustomer, asChild, children }: { custome
 }
 
 export default function CustomerList({ customers, deleteCustomer }: CustomerListProps) {
+  const { t } = useLanguage();
   if (customers.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-10">
-        <p>No customers match your search.</p>
+        <p>{t('customers.no_match')}</p>
       </div>
     );
   }
@@ -73,24 +76,24 @@ export default function CustomerList({ customers, deleteCustomer }: CustomerList
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="w-[140px] text-right">Actions</TableHead>
+              <TableHead>{t('customers.table.name')}</TableHead>
+              <TableHead>{t('customers.table.phone')}</TableHead>
+              <TableHead>{t('customers.table.email')}</TableHead>
+              <TableHead className="w-[140px] text-right">{t('customers.table.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {customers.map((customer) => (
-              <TableRow key={customer.id}>
+              <TableRow key={customer.id} className="cursor-pointer" onClick={() => window.location.href = `/customers/${customer.id}`}>
                 <TableCell className="font-medium">{customer.name}</TableCell>
                 <TableCell>
-                  {customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline">{customer.phone}</a> : <span className="text-muted-foreground">N/A</span>}
+                  {customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{customer.phone}</a> : <span className="text-muted-foreground">N/A</span>}
                 </TableCell>
                 <TableCell>
-                  {customer.email ? <a href={`mailto:${customer.email}`} className="hover:underline">{customer.email}</a> : <span className="text-muted-foreground">N/A</span>}
+                  {customer.email ? <a href={`mailto:${customer.email}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{customer.email}</a> : <span className="text-muted-foreground">N/A</span>}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Link href={`/customers/${customer.id}/edit`} passHref>
+                  <Link href={`/customers/${customer.id}/edit`} passHref onClick={(e) => e.stopPropagation()}>
                     <Button variant="outline" size="icon">
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit Customer</span>
@@ -113,8 +116,8 @@ export default function CustomerList({ customers, deleteCustomer }: CustomerList
       <div className="md:hidden space-y-3">
         {customers.map((customer) => (
           <div key={customer.id} className="relative">
-            <Link href={`/customers/${customer.id}/edit`} className="block group">
-                <Card className="bg-white transition-shadow group-hover:shadow-md">
+            <Link href={`/customers/${customer.id}`} className="block group">
+                <Card className="transition-shadow group-hover:shadow-md">
                     <CardContent className="p-4">
                         <p className="font-semibold text-base pr-10">{customer.name}</p>
                         <div className="text-sm text-muted-foreground mt-2 space-y-1">
@@ -134,7 +137,7 @@ export default function CustomerList({ customers, deleteCustomer }: CustomerList
                     </CardContent>
                 </Card>
             </Link>
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-2 right-2 z-10">
                 <DeleteDialog customer={customer} deleteCustomer={deleteCustomer} asChild>
                     <Button
                     variant="ghost"

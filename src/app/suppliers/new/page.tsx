@@ -6,10 +6,12 @@ import SupplierForm from '@/components/supplier-form';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function NewSupplierPage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const { t } = useLanguage();
   
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -25,15 +27,15 @@ export default function NewSupplierPage() {
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Add New Supplier
+            {t('supplier.new.title')}
           </h1>
           <p className="text-muted-foreground">
-            Fill in the details for the new supplier.
+            {t('supplier.new.desc')}
           </p>
         </div>
         <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
+          {t('general.back')}
         </Button>
       </div>
       <SupplierForm />

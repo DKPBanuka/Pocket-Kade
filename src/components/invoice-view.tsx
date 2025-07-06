@@ -1,5 +1,5 @@
 
-import type { Invoice, LineItem, Payment } from '@/lib/types';
+import type { Invoice, LineItem, Payment, Organization } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface InvoiceViewProps {
   invoice: Invoice;
+  organization: Organization | null;
 }
 
 const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string => {
@@ -43,7 +44,7 @@ const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string =
     return format(date, 'PPP');
 };
 
-export default function InvoiceView({ invoice }: InvoiceViewProps) {
+export default function InvoiceView({ invoice, organization }: InvoiceViewProps) {
   const subtotal = invoice.lineItems.reduce(
     (acc, item) => acc + item.quantity * item.price,
     0
@@ -64,7 +65,7 @@ export default function InvoiceView({ invoice }: InvoiceViewProps) {
   const amountDue = total - amountPaid;
   
   return (
-    <Card className="print-container w-full rounded-xl shadow-lg bg-white">
+    <Card className="print-container w-full rounded-xl shadow-lg">
       <CardHeader className="p-4 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
@@ -73,9 +74,10 @@ export default function InvoiceView({ invoice }: InvoiceViewProps) {
             </div>
             <div className="hidden print:block">
                <h1 className="text-2xl font-bold font-headline text-foreground">
-                    Tharindu Niroshan
+                    {organization?.name || 'Your Company Name'}
                 </h1>
-                <p>0756438091</p>
+                {organization?.address && <p className="text-sm text-muted-foreground whitespace-pre-line">{organization.address}</p>}
+                {organization?.phone && <p className="text-sm text-muted-foreground">{organization.phone}</p>}
             </div>
           </div>
           <div className="text-left sm:text-right flex-shrink-0">
@@ -112,7 +114,7 @@ export default function InvoiceView({ invoice }: InvoiceViewProps) {
             <div className="text-left sm:text-right no-print">
                 <p className="text-muted-foreground font-semibold">From</p>
                 <p className="font-medium">{invoice.createdByName}</p>
-                <p>0756438091</p>
+                {organization?.phone && <p>{organization.phone}</p>}
             </div>
         </div>
       </CardHeader>

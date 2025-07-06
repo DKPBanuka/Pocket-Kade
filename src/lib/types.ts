@@ -7,6 +7,7 @@ export interface AuthUser {
   uid: string;
   email: string | null;
   username: string;
+  onboardingCompleted: boolean;
   tenants: { [key: string]: UserRole };
   activeTenantId: string | null;
   activeRole: UserRole | null;
@@ -17,6 +18,11 @@ export interface Organization {
   name: string;
   ownerUid: string;
   createdAt: string;
+  onboardingCompleted: boolean;
+  address?: string;
+  phone?: string;
+  brn?: string;
+  selectedTheme?: string;
 }
 
 export interface Customer {
@@ -54,6 +60,8 @@ export interface InventoryItem {
   reorderPoint: number;
   status: ItemStatus;
   warrantyPeriod: string;
+  supplierId?: string;
+  supplierName?: string;
   createdAt: string; // Storing as ISO string on client, but can be Timestamp from server
 }
 
@@ -120,7 +128,8 @@ export interface ReturnItem {
 
 export interface AppNotification {
   id: string;
-  message: string;
+  messageKey: string; // e.g., 'notifications.inventory.item_updated'
+  messageParams?: { [key: string]: string | number }; // e.g., { user: 'John', item: 'Laptop', count: 5 }
   link: string;
   read: boolean;
   recipientUid: string;
@@ -160,4 +169,29 @@ export interface StockMovement {
   createdAt: string; // ISO string
   referenceId?: string; // e.g., Invoice ID, Return ID, or a note like "Initial Stock"
   createdByName: string;
+}
+
+export type ExpenseCategory = 'Rent' | 'Salaries' | 'Utilities' | 'Marketing' | 'Purchases' | 'Other';
+export interface Expense {
+  id: string;
+  tenantId: string;
+  category: ExpenseCategory;
+  amount: number;
+  date: string; // ISO String
+  description: string;
+  vendor?: string;
+  receiptUrl?: string;
+  createdBy: string; // user uid
+  createdByName: string;
+  createdAt: string; // ISO String
+}
+
+export interface Invitation {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: 'admin' | 'staff';
+  token: string;
+  status: 'pending' | 'completed';
+  createdAt: string; // ISO string
 }

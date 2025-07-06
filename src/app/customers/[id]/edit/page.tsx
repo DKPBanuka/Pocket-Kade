@@ -19,12 +19,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useLanguage } from '@/contexts/language-context';
 
 export default function EditCustomerPage() {
   const router = useRouter();
   const params = useParams();
   const { getCustomer, isLoading, deleteCustomer } = useCustomers();
   const [customer, setCustomer] = useState<Customer | undefined>(undefined);
+  const { t } = useLanguage();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   
@@ -59,34 +61,34 @@ export default function EditCustomerPage() {
        <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">
-              Edit Customer
+              {t('customers.edit.title')}
             </h1>
             <p className="text-muted-foreground">
-              Update the details for '{customer.name}'.
+              {t('customers.edit.desc', { customerName: customer.name })}
             </p>
         </div>
         <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('general.back')}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  <Trash2 className="mr-2 h-4 w-4" /> {t('customers.edit.delete')}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('customers.edit.delete_confirm_title')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the customer '{customer.name}' from your database.
+                    {t('customers.edit.delete_confirm_desc', { customerName: customer.name })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                    Delete
+                    {t('customers.edit.delete')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

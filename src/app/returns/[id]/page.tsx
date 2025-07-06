@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
+import { useLanguage } from '@/contexts/language-context';
 
 const statusStyles: { [key in ReturnStatus]: string } = {
     'Awaiting Inspection': 'bg-yellow-100 text-yellow-800 border-transparent dark:bg-yellow-900/50 dark:text-yellow-300',
@@ -58,6 +59,7 @@ export default function ReturnDetailPage() {
   const params = useParams();
   const { getReturn, isLoading: returnsLoading, updateReturn } = useReturns();
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [item, setItem] = useState<ReturnItem | undefined>(undefined);
 
   const isLoading = returnsLoading || authLoading;
@@ -107,17 +109,17 @@ export default function ReturnDetailPage() {
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">
-              Return {item.returnId}
+              {t('return.view.title', { returnId: item.returnId })}
             </h1>
             <div className="text-muted-foreground flex items-center gap-2">
-              <Badge className={cn('text-xs', statusStyles[item.status])}>{item.status}</Badge>
+              <Badge className={cn('text-xs', statusStyles[item.status])}>{t(`returns.status.${item.status.toLowerCase().replace(/ /g, '_')}`)}</Badge>
               <span>&bull;</span>
-              <span>For item: {item.inventoryItemName}</span>
+              <span>{t('return.view.item_info', { itemName: item.inventoryItemName })}</span>
             </div>
         </div>
         <Button variant="outline" onClick={() => router.back()}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t('general.back')}
         </Button>
       </div>
 
@@ -125,29 +127,29 @@ export default function ReturnDetailPage() {
         <div className="md:col-span-2 space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Return Information</CardTitle>
+                    <CardTitle>{t('return.view.info_card_title')}</CardTitle>
                 </CardHeader>
                 <CardContent className="grid sm:grid-cols-2 gap-x-4 gap-y-6 text-sm">
-                    <InfoItem icon={User} label="Customer" value={item.customerName} />
-                    <InfoItem icon={Tag} label="Product" value={`${item.inventoryItemName} (Qty: ${item.quantity})`} />
-                    <InfoItem icon={FileText} label="Original Invoice" value={item.originalInvoiceId || 'N/A'} />
-                    <InfoItem icon={Calendar} label="Date Logged" value={format(new Date(item.createdAt), 'PPP p')} />
-                    {item.resolutionDate && <InfoItem icon={CheckCircle2} label="Date Resolved" value={format(new Date(item.resolutionDate), 'PPP p')} />}
+                    <InfoItem icon={User} label={t('return.view.customer')} value={item.customerName} />
+                    <InfoItem icon={Tag} label={t('return.view.product')} value={`${item.inventoryItemName} (Qty: ${item.quantity})`} />
+                    <InfoItem icon={FileText} label={t('return.view.original_invoice')} value={item.originalInvoiceId || 'N/A'} />
+                    <InfoItem icon={Calendar} label={t('return.view.date_logged')} value={format(new Date(item.createdAt), 'PPP p')} />
+                    {item.resolutionDate && <InfoItem icon={CheckCircle2} label={t('return.view.date_resolved')} value={format(new Date(item.resolutionDate), 'PPP p')} />}
                     <div className="sm:col-span-2">
-                        <InfoItem icon={MessageSquare} label="Reason for Return" value={item.reason} />
+                        <InfoItem icon={MessageSquare} label={t('return.view.reason')} value={item.reason} />
                     </div>
                 </CardContent>
             </Card>
              <Card>
                 <CardHeader>
-                    <CardTitle>Internal Notes</CardTitle>
-                    <CardDescription>Visible only to staff.</CardDescription>
+                    <CardTitle>{t('return.view.internal_notes_title')}</CardTitle>
+                    <CardDescription>{t('return.view.internal_notes_desc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {item.notes ? (
                         <p className="text-sm whitespace-pre-wrap">{item.notes}</p>
                     ) : (
-                        <p className="text-sm text-muted-foreground">No internal notes have been added yet.</p>
+                        <p className="text-sm text-muted-foreground">{t('return.view.no_notes')}</p>
                     )}
                 </CardContent>
             </Card>
@@ -155,8 +157,8 @@ export default function ReturnDetailPage() {
         <div className="md:col-span-1">
             <Card className="bg-white sticky top-24">
                  <CardHeader>
-                    <CardTitle>Update Status</CardTitle>
-                    <CardDescription>Change the status or add notes for this return.</CardDescription>
+                    <CardTitle>{t('return.view.update_status_title')}</CardTitle>
+                    <CardDescription>{t('return.view.update_status_desc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
@@ -166,20 +168,20 @@ export default function ReturnDetailPage() {
                                 name="status"
                                 render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>New Status</FormLabel>
+                                    <FormLabel>{t('return.view.new_status')}</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isClosed || !canUpdateStatus}>
                                         <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select a status" />
+                                            <SelectValue placeholder={t('return.view.select_status_placeholder')} />
                                         </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             {returnStatuses.map(status => (
-                                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                                                <SelectItem key={status} value={status}>{t(`returns.status.${status.toLowerCase().replace(/ /g, '_')}`)}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {!canUpdateStatus && <p className="text-xs text-muted-foreground mt-2">Only Admins can change the status.</p>}
+                                    {!canUpdateStatus && <p className="text-xs text-muted-foreground mt-2">{t('return.view.status_permission_info')}</p>}
                                     <FormMessage />
                                 </FormItem>
                                 )}
@@ -189,10 +191,10 @@ export default function ReturnDetailPage() {
                                 name="notes"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Update Internal Notes</FormLabel>
+                                    <FormLabel>{t('return.view.update_notes_label')}</FormLabel>
                                     <FormControl>
                                         <Textarea
-                                        placeholder="Add inspection details, repair notes, etc."
+                                        placeholder={t('return.view.update_notes_placeholder')}
                                         className="resize-y min-h-[100px]"
                                         {...field}
                                         disabled={isClosed || !canUpdate}
@@ -206,14 +208,14 @@ export default function ReturnDetailPage() {
                              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isClosed || !canUpdate}>
                                 {form.formState.isSubmitting ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('return.view.saving')}
                                 </>
                                 ) : (
-                                    'Save Changes'
+                                    t('return.view.save_changes')
                                 )}
                             </Button>
-                            {isClosed && <p className="text-xs text-center text-muted-foreground pt-2">This return is closed and cannot be modified.</p>}
-                            {!canUpdate && <p className="text-xs text-center text-muted-foreground pt-2">You do not have permission to update returns.</p>}
+                            {isClosed && <p className="text-xs text-center text-muted-foreground pt-2">{t('return.view.closed_info')}</p>}
+                            {!canUpdate && <p className="text-xs text-center text-muted-foreground pt-2">{t('return.view.update_permission_info')}</p>}
                         </form>
                     </Form>
                 </CardContent>

@@ -13,12 +13,14 @@ import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { exportToCsv } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function CustomersPage() {
   const { customers, isLoading, deleteCustomer } = useCustomers();
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const filteredCustomers = customers.filter(
     (customer) =>
@@ -54,21 +56,21 @@ export default function CustomersPage() {
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Customers
+            {t('customers.title')}
           </h1>
           <p className="text-muted-foreground">
-            Manage your customer database.
+            {t('customers.desc')}
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
             <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                {t('customers.export')}
             </Button>
             <Link href="/customers/new" passHref>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
-                New Customer
+                {t('customers.new')}
               </Button>
             </Link>
         </div>
@@ -88,8 +90,8 @@ export default function CustomersPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                 type="text"
-                placeholder="Search by name, phone, or email..."
-                className="w-full bg-white py-3 pl-10 pr-4 shadow-sm"
+                placeholder={t('customers.search_placeholder')}
+                className="w-full py-3 pl-10 pr-4 shadow-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -98,16 +100,16 @@ export default function CustomersPage() {
           <CustomerList customers={filteredCustomers} deleteCustomer={deleteCustomer} />
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-white/50 p-12 text-center">
+        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
           <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">No customers found</h3>
+          <h3 className="mt-4 text-xl font-semibold font-headline">{t('customers.no_customers_title')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Get started by adding your first customer.
+            {t('customers.no_customers_desc')}
           </p>
           <Link href="/customers/new" passHref>
             <Button className="mt-6">
               <Plus className="mr-2 h-4 w-4" />
-              Add Customer
+              {t('customers.add_customer_btn')}
             </Button>
           </Link>
         </div>

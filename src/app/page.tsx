@@ -15,6 +15,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import type { Invoice, LineItem } from '@/lib/types';
 import { useInventory } from '@/hooks/use-inventory';
 import { forecastSalesAction } from '@/app/actions';
+import { useLanguage } from '@/contexts/language-context';
 
 const formatCurrency = (amount: number) => `Rs.${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -115,6 +116,7 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
     const [forecast, setForecast] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useLanguage();
 
     const salesDataForForecast = useMemo(() => {
         const salesByDay: { [key: string]: number } = {};
@@ -145,7 +147,7 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
             setForecast(result.forecast);
         } catch (err) {
             console.error(err);
-            setError("Sorry, we couldn't generate a forecast at this time.");
+            setError(t('dashboard.forecast.error'));
         } finally {
             setIsLoading(false);
         }
@@ -154,8 +156,8 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
     return (
         <Card className="h-full flex flex-col">
             <CardHeader>
-                <CardTitle>AI Sales Forecast</CardTitle>
-                <CardDescription>A 30-day sales projection.</CardDescription>
+                <CardTitle>{t('dashboard.forecast.title')}</CardTitle>
+                <CardDescription>{t('dashboard.forecast.desc')}</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-center items-center text-center p-6">
                 {isLoading ? (
@@ -168,9 +170,9 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
                     <>
                         <Sparkles className="h-10 w-10 text-muted-foreground mb-4" />
                          <Button onClick={handleGenerateForecast} disabled={salesDataForForecast.length < 7}>
-                            Generate
+                            {t('dashboard.forecast.generate')}
                         </Button>
-                        {salesDataForForecast.length < 7 && <p className="text-xs text-muted-foreground mt-2">Needs 7+ days of sales.</p>}
+                        {salesDataForForecast.length < 7 && <p className="text-xs text-muted-foreground mt-2">{t('dashboard.forecast.needs_data')}</p>}
                         {error && <p className="text-xs text-destructive mt-2">{error}</p>}
                     </>
                 )}
@@ -181,6 +183,7 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
 
 
 function DashboardAnalytics({ invoices }: { invoices: Invoice[] }) {
+  const { t } = useLanguage();
   const { totalOverdue, revenueThisMonth, invoicesThisMonth } = useMemo(() => {
     const now = new Date();
     const start = startOfMonth(now);
@@ -226,32 +229,32 @@ function DashboardAnalytics({ invoices }: { invoices: Invoice[] }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Overdue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.stats.total_overdue')}</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalOverdue)}</div>
-            <p className="text-xs text-muted-foreground">From all unpaid & partially paid invoices</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.stats.overdue_desc')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue (This Month)</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.stats.revenue_month')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(revenueThisMonth)}</div>
-            <p className="text-xs text-muted-foreground">Payments received this month</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.stats.revenue_desc')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Invoices Sent (This Month)</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.stats.invoices_month')}</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">+{invoicesThisMonth}</div>
-            <p className="text-xs text-muted-foreground">New invoices created this month</p>
+            <p className="text-xs text-muted-foreground">{t('dashboard.stats.invoices_desc')}</p>
           </CardContent>
         </Card>
       </div>
@@ -264,6 +267,7 @@ export default function DashboardPage() {
   const { invoices, isLoading: invoicesLoading } = useInvoices();
   const { inventory, isLoading: inventoryLoading } = useInventory();
   const { user, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const isLoading = invoicesLoading || authLoading || inventoryLoading;
 
   if (isLoading) {
@@ -283,10 +287,10 @@ export default function DashboardPage() {
       <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Welcome, {user.username}!
+            {t('staff.welcome', { username: user.username })}
           </h1>
           <p className="text-muted-foreground">
-            Ready to get started? Here are some quick actions.
+            {t('staff.get_started')}
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -294,12 +298,12 @@ export default function DashboardPage() {
             <Card className="h-full transition-shadow group-hover:shadow-lg">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">New Invoice</CardTitle>
+                  <CardTitle className="text-base font-semibold">{t('staff.action.new_invoice')}</CardTitle>
                   <FileText className="h-5 w-5 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Create a new invoice for a customer.</p>
+                <p className="text-sm text-muted-foreground">{t('staff.action.new_invoice_desc')}</p>
               </CardContent>
             </Card>
           </Link>
@@ -307,12 +311,12 @@ export default function DashboardPage() {
             <Card className="h-full transition-shadow group-hover:shadow-lg">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">View Inventory</CardTitle>
+                  <CardTitle className="text-base font-semibold">{t('staff.action.view_inventory')}</CardTitle>
                   <Archive className="h-5 w-5 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Check current stock levels.</p>
+                <p className="text-sm text-muted-foreground">{t('staff.action.view_inventory_desc')}</p>
               </CardContent>
             </Card>
           </Link>
@@ -320,12 +324,12 @@ export default function DashboardPage() {
             <Card className="h-full transition-shadow group-hover:shadow-lg">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">Add Customer</CardTitle>
+                  <CardTitle className="text-base font-semibold">{t('staff.action.add_customer')}</CardTitle>
                   <Users className="h-5 w-5 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Add a new customer to the database.</p>
+                <p className="text-sm text-muted-foreground">{t('staff.action.add_customer_desc')}</p>
               </CardContent>
             </Card>
           </Link>
@@ -333,12 +337,12 @@ export default function DashboardPage() {
             <Card className="h-full transition-shadow group-hover:shadow-lg">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">Log a Return</CardTitle>
+                  <CardTitle className="text-base font-semibold">{t('staff.action.log_return')}</CardTitle>
                   <Undo2 className="h-5 w-5 text-muted-foreground" />
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Process a new customer return.</p>
+                <p className="text-sm text-muted-foreground">{t('staff.action.log_return_desc')}</p>
               </CardContent>
             </Card>
           </Link>
@@ -352,10 +356,10 @@ export default function DashboardPage() {
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Dashboard
+          {t('dashboard.title')}
         </h1>
         <p className="text-muted-foreground mb-2">
-          Welcome back, {user?.username}! Here's a summary of your business.
+          {t('dashboard.welcome', { username: user?.username })}
         </p>
       </div>
 
@@ -365,8 +369,8 @@ export default function DashboardPage() {
           <Link href="/reports/sales-analysis" className="group block">
               <Card className="h-full transition-shadow duration-200 group-hover:shadow-lg">
                   <CardHeader className="relative">
-                      <CardTitle>Sales Over Time</CardTitle>
-                      <CardDescription>Revenue from the last 30 days. Click to see details.</CardDescription>
+                      <CardTitle>{t('dashboard.chart.sales_over_time')}</CardTitle>
+                      <CardDescription>{t('dashboard.chart.sales_desc')}</CardDescription>
                       <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   </CardHeader>
                   <CardContent>
@@ -377,8 +381,8 @@ export default function DashboardPage() {
           <Link href="/reports/product-performance" className="group block">
               <Card className="h-full transition-shadow duration-200 group-hover:shadow-lg">
                   <CardHeader className="relative">
-                      <CardTitle>Top Selling Products</CardTitle>
-                      <CardDescription>Top 5 products by units sold. Click to see details.</CardDescription>
+                      <CardTitle>{t('dashboard.chart.top_products')}</CardTitle>
+                      <CardDescription>{t('dashboard.chart.top_products_desc')}</CardDescription>
                        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   </CardHeader>
                   <CardContent>

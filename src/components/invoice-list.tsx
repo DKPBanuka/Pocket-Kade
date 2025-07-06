@@ -22,7 +22,12 @@ const statusStyles: { [key in InvoiceStatus]: string } = {
 export default function InvoiceList({ invoices }: InvoiceListProps) {
   const calculateTotal = (invoice: Invoice) => {
     const subtotal = invoice.lineItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
-    const discountAmount = subtotal * ((invoice.discount || 0) / 100);
+    let discountAmount = 0;
+    if (invoice.discountType === 'percentage') {
+        discountAmount = subtotal * ((invoice.discountValue || 0) / 100);
+    } else if (invoice.discountType === 'fixed') {
+        discountAmount = invoice.discountValue || 0;
+    }
     return subtotal - discountAmount;
   };
 
@@ -38,7 +43,7 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
     <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2">
       {invoices.map((invoice) => (
         <Link href={`/invoice/${invoice.id}`} key={invoice.id} className="group">
-          <Card className={cn("h-full transition-all duration-300 ease-in-out group-hover:shadow-lg group-hover:-translate-y-1 bg-white", invoice.status === 'Cancelled' && 'opacity-60 bg-gray-50')}>
+          <Card className={cn("h-full transition-all duration-300 ease-in-out group-hover:shadow-lg group-hover:-translate-y-1", invoice.status === 'Cancelled' && 'opacity-60 bg-muted/50')}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-headline text-primary">{invoice.id}</CardTitle>

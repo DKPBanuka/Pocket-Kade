@@ -1,0 +1,60 @@
+
+"use client";
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useExpenses } from '@/hooks/use-expenses';
+import ExpenseForm from '@/components/expense-form';
+import { Button } from '@/components/ui/button';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import type { Expense } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
+
+export default function EditExpensePage() {
+  const router = useRouter();
+  const params = useParams();
+  const { getExpense, isLoading } = useExpenses();
+  const [expense, setExpense] = useState<Expense | undefined>(undefined);
+  const { t } = useLanguage();
+
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  useEffect(() => {
+    if (!isLoading && id) {
+      const foundExpense = getExpense(id);
+      if (foundExpense) {
+        setExpense(foundExpense);
+      } else {
+        router.push('/expenses');
+      }
+    }
+  }, [id, getExpense, isLoading, router]);
+
+  if (isLoading || !expense) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
+       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+            <h1 className="text-3xl font-bold font-headline tracking-tight">
+              {t('expenses.edit.title')}
+            </h1>
+            <p className="text-muted-foreground">
+              {t('expenses.edit.desc', { expenseDesc: expense.description })}
+            </p>
+        </div>
+        <Button variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t('general.back')}
+        </Button>
+      </div>
+      <ExpenseForm expense={expense} />
+    </div>
+  );
+}

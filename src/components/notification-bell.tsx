@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 import type { AppNotification } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 const notificationTypeConfig: { [key in AppNotification['type']]: { icon: React.ElementType, color: string }} = {
     invoice: { icon: FileText, color: 'text-blue-500' },
@@ -27,6 +28,7 @@ const notificationTypeConfig: { [key in AppNotification['type']]: { icon: React.
 export function NotificationBell() {
   const { notifications, isLoading, unreadCount, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useLanguage();
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -51,7 +53,7 @@ export function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="p-4 font-medium border-b text-sm">
-            Notifications
+            {t('notifications.title')}
         </div>
         <ScrollArea className="h-96">
           {isLoading ? (
@@ -60,13 +62,14 @@ export function NotificationBell() {
             </div>
           ) : notifications.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground p-8">
-              You have no new notifications.
+              {t('notifications.no_notifications')}
             </p>
           ) : (
             <div className="flex flex-col">
               {notifications.map((notification) => {
                 const config = notificationTypeConfig[notification.type] || notificationTypeConfig.general;
                 const Icon = config.icon;
+                const message = t(notification.messageKey, notification.messageParams);
 
                 return (
                     <Link 
@@ -83,7 +86,7 @@ export function NotificationBell() {
                                 <Icon className={cn('h-3.5 w-3.5', config.color)} />
                             </div>
                             <div>
-                                <p className="mb-1 leading-snug text-sm">{notification.message}</p>
+                                <p className="mb-1 leading-snug text-sm">{message}</p>
                                 <p className="text-xs text-muted-foreground">
                                     {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                                 </p>

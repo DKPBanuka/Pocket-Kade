@@ -1,21 +1,30 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import AppHeader from '@/components/layout/header';
 import AppSidebar from '@/components/layout/sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MobileBottomNav from '@/components/mobile-bottom-nav';
+import { useTheme } from 'next-themes';
 
 const unprotectedRoutes = ['/login', '/signup'];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const { user } = useAuth();
+    const { user, organization } = useAuth();
+    const { setTheme } = useTheme();
+
+    useEffect(() => {
+        if (organization?.selectedTheme) {
+            setTheme(organization.selectedTheme);
+        }
+    }, [organization, setTheme]);
 
     // On unprotected routes, just render the page content without the shell
-    if (unprotectedRoutes.includes(pathname)) {
+    if (unprotectedRoutes.includes(pathname) || pathname.startsWith('/setup')) {
         return <>{children}</>;
     }
 

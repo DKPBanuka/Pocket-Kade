@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -15,31 +14,43 @@ import {
     SidebarFooter
 } from '@/components/ui/sidebar';
 import Logo from '../logo';
-import { Archive, FileText, LayoutDashboard, LineChart, LogOut, MessageSquare, Undo2, Users, Contact, Truck } from 'lucide-react';
+import { Archive, FileText, LayoutDashboard, LineChart, LogOut, MessageSquare, Settings, Truck, Undo2, Users, Wallet, Contact } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { useLanguage } from '@/contexts/language-context';
+import { useSidebar } from '@/components/ui/sidebar';
 
 export default function AppSidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const { totalUnreadCount } = useChatContext();
+  const { t } = useLanguage();
+  const { isMobile, setOpenMobile } = useSidebar();
   
-  const navItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'] },
-    { href: '/invoices', label: 'Invoices', icon: FileText, roles: ['owner', 'admin', 'staff'] },
-    { href: '/customers', label: 'Customers', icon: Contact, roles: ['owner', 'admin', 'staff'] },
-    { href: '/inventory', label: 'Inventory', icon: Archive, roles: ['owner', 'admin', 'staff'] },
-    { href: '/returns', label: 'Returns', icon: Undo2, roles: ['owner', 'admin', 'staff'] },
-    { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['owner', 'admin', 'staff'] },
-    { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['owner', 'admin'] },
-    { href: '/reports', label: 'Reports', icon: LineChart, roles: ['owner', 'admin'] },
-    { href: '/users', label: 'Users', icon: Users, roles: ['owner', 'admin'] },
-  ];
-
   if (!user) {
       return null;
   }
+
+  const navItems = [
+    { href: '/', label: t('sidebar.dashboard'), icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'] },
+    { href: '/invoices', label: t('sidebar.invoices'), icon: FileText, roles: ['owner', 'admin', 'staff'] },
+    { href: '/customers', label: t('sidebar.customers'), icon: Contact, roles: ['owner', 'admin', 'staff'] },
+    { href: '/inventory', label: t('sidebar.inventory'), icon: Archive, roles: ['owner', 'admin', 'staff'] },
+    { href: user.activeRole === 'staff' ? '/expenses/new' : '/expenses', label: t('sidebar.expenses'), icon: Wallet, roles: ['owner', 'admin', 'staff'] },
+    { href: '/returns', label: t('sidebar.returns'), icon: Undo2, roles: ['owner', 'admin', 'staff'] },
+    { href: '/messages', label: t('sidebar.messages'), icon: MessageSquare, roles: ['owner', 'admin', 'staff'] },
+    { href: '/suppliers', label: t('sidebar.suppliers'), icon: Truck, roles: ['owner', 'admin'] },
+    { href: '/reports', label: t('sidebar.analysis'), icon: LineChart, roles: ['owner', 'admin'] },
+    { href: '/users', label: t('sidebar.users'), icon: Users, roles: ['owner'] },
+  ];
+
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   const availableNavItems = navItems.filter(item => user.activeRole && item.roles.includes(user.activeRole));
   
@@ -47,8 +58,6 @@ export default function AppSidebar() {
     if (href === '/') {
         return pathname === '/';
     }
-    // Check if the current pathname starts with the link's href.
-    // This handles nested routes correctly (e.g., /invoices/new is active for /invoices).
     return pathname.startsWith(href);
   }
 
@@ -67,7 +76,7 @@ export default function AppSidebar() {
                             isActive={isLinkActive(item.href)}
                             tooltip={{children: item.label}}
                         >
-                             <Link href={item.href}>
+                             <Link href={item.href} onClick={handleLinkClick}>
                                 <item.icon />
                                 <span>{item.label}</span>
                             </Link>
@@ -86,47 +95,61 @@ export default function AppSidebar() {
         </SidebarContent>
 
         {/* Desktop Footer */}
-        <SidebarFooter className="hidden md:flex border-t">
+        <SidebarFooter className="hidden md:flex flex-col gap-1 border-t p-2">
             <SidebarMenu>
                 <SidebarMenuItem>
                      <SidebarMenuButton
+                        asChild
                         className="h-auto justify-start p-2"
                         variant="ghost"
                         size="default"
+                        isActive={isLinkActive('/settings')}
                       >
-                        <Avatar className="size-8">
-                            <AvatarFallback>{user.username.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col items-start text-left">
-                           <span className="font-medium">{user.username}</span>
-                           <span className="text-xs uppercase text-muted-foreground">{user.activeRole}</span>
-                        </div>
+                        <Link href="/settings" onClick={handleLinkClick}>
+                            <Avatar className="size-8">
+                                <AvatarFallback>{user.username.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col items-start text-left">
+                               <span className="font-medium">{user.username}</span>
+                               <span className="text-xs uppercase text-muted-foreground">{user.activeRole}</span>
+                            </div>
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton onClick={signOut} tooltip={{children: "Logout"}}>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton
+                        variant="ghost"
+                        className="w-full justify-start"
+                        onClick={() => signOut()}
+                        tooltip={{children: t('sidebar.logout')}}
+                    >
                         <LogOut />
-                        <span>Logout</span>
+                        <span>{t('sidebar.logout')}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarFooter>
         
         {/* Mobile Footer */}
-        <SidebarFooter className="md:hidden flex flex-col gap-4 border-t pt-4">
-             <div className="flex items-center gap-2 px-2">
-                <Avatar className="size-8">
-                    <AvatarFallback>{user.username.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <p className="text-sm font-medium">{user.username}</p>
-                    <Badge variant="outline" className="uppercase text-xs">{user.activeRole}</Badge>
+        <SidebarFooter className="md:hidden flex flex-col gap-2 border-t p-2">
+             <Link href="/settings" className="block rounded-md hover:bg-muted" onClick={handleLinkClick}>
+                <div className="flex items-center gap-2 px-2 py-2">
+                    <Avatar className="size-8">
+                        <AvatarFallback>{user.username.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="text-sm font-medium">{user.username}</p>
+                        <Badge variant="outline" className="uppercase text-xs">{user.activeRole}</Badge>
+                    </div>
                 </div>
-            </div>
-             <Button variant="ghost" onClick={signOut} className="w-full justify-start">
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-            </Button>
+             </Link>
+             <Button variant="ghost" className="w-full justify-start" onClick={() => {
+                signOut();
+                handleLinkClick();
+             }}>
+                <LogOut className="mr-2 h-4 w-4"/>
+                <span>{t('sidebar.logout')}</span>
+             </Button>
         </SidebarFooter>
     </Sidebar>
   );

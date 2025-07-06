@@ -5,34 +5,47 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useChatContext } from '@/contexts/chat-context';
-import { LayoutDashboard, FileText, Archive, LineChart, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, FileText, Archive, LineChart, MessageSquare, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { totalUnreadCount } = useChatContext();
-
-  const navItems = [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'] },
-    { href: '/invoices', label: 'Invoices', icon: FileText, roles: ['owner', 'admin', 'staff'] },
-    { href: '/inventory', label: 'Inventory', icon: Archive, roles: ['owner', 'admin', 'staff'] },
-    { href: '/reports', label: 'Reports', icon: LineChart, roles: ['owner', 'admin'] },
-    { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['owner', 'admin', 'staff'] },
-  ];
+  const { t } = useLanguage();
 
   if (!user || !user.activeRole) {
     return null;
   }
+
+  // Define root paths that have a bottom nav icon.
+  const mainNavRoots = ['/', '/invoices', '/inventory', '/expenses', '/reports'];
   
+  // The nav should only be visible on these exact root paths.
+  // Exception: For staff, the /expenses link points to /expenses/new, so that path should also be visible.
+  const isStaffOnTheirExpensePage = user.activeRole === 'staff' && pathname === '/expenses/new';
+  if (!mainNavRoots.includes(pathname) && !isStaffOnTheirExpensePage) {
+    return null;
+  }
+  
+  const navItems = [
+    { href: '/', label: t('sidebar.dashboard'), icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'] },
+    { href: '/invoices', label: t('sidebar.invoices'), icon: FileText, roles: ['owner', 'admin', 'staff'] },
+    { href: '/inventory', label: t('sidebar.inventory'), icon: Archive, roles: ['owner', 'admin', 'staff'] },
+    { href: user.activeRole === 'staff' ? '/expenses/new' : '/expenses', label: t('sidebar.expenses'), icon: Wallet, roles: ['owner', 'admin', 'staff'] },
+    { href: '/reports', label: t('sidebar.analysis'), icon: LineChart, roles: ['owner', 'admin'] },
+  ];
+
   const availableNavItems = navItems.filter(item => item.roles.includes(user.activeRole!));
 
   const isLinkActive = (href: string) => {
     if (href === '/') {
         return pathname === '/';
     }
-    // Check if the current pathname starts with the link's href.
+    // Check if the current pathname starts with the link's href for highlighting.
+    // This allows /invoices/new to highlight the /invoices tab.
     return pathname.startsWith(href);
   }
 
@@ -56,7 +69,7 @@ export default function MobileBottomNav() {
                     </Badge>
                 )}
             </div>
-            <span className="text-xs">{item.label}</span>
+            <span className="text-xs whitespace-nowrap">{item.label}</span>
           </Link>
         ))}
       </div>

@@ -110,7 +110,7 @@ export default function CustomerForm({ customer, onFinished }: CustomerFormProps
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <Card className="bg-white">
+        <Card>
           <CardContent className="p-6">
             {isContactPickerSupported && !isEditMode && (
                 <Button 

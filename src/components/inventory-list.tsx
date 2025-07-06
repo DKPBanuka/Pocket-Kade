@@ -14,7 +14,6 @@ import {
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -22,7 +21,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -101,40 +99,44 @@ export default function InventoryList({ inventory }: InventoryListProps) {
       </div>
 
       {/* Mobile View: Cards */}
-      <div className="md:hidden space-y-4">
-        {inventory.map((item) => (
-          <Link href={`/inventory/${item.id}`} key={item.id} className="group block">
-            <Card className="bg-white transition-shadow duration-200 group-hover:shadow-md">
-              <CardHeader>
-                  <div className="flex justify-between items-start">
-                      <div>
-                          <CardTitle>{item.name}</CardTitle>
-                          <CardDescription>{item.brand} / {item.category}</CardDescription>
-                      </div>
-                      <Badge className={cn('text-xs', statusStyles[item.status])}>{item.status}</Badge>
-                  </div>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                      <span className="text-muted-foreground">Selling Price</span>
-                      <span className="font-medium">Rs.{item.price.toFixed(2)}</span>
-                  </div>
-                  {isPrivilegedUser && (
-                      <div className="flex justify-between">
-                          <span className="text-muted-foreground">Cost Price</span>
-                          <span className="font-medium">Rs.{item.costPrice.toFixed(2)}</span>
-                      </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Stock</span>
-                       <Badge variant={isLowStock(item) ? "destructive" : "secondary"}>
-                          {item.quantity} in stock
-                      </Badge>
-                  </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+       <div className="md:hidden space-y-4">
+        {inventory.map((item) => {
+            const cardContent = (
+                <Card className="transition-shadow duration-200 group-hover:shadow-md">
+                    <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-xl font-bold font-headline">{item.name}</CardTitle>
+                                <CardDescription>{item.brand} / {item.category}</CardDescription>
+                            </div>
+                            <Badge className={cn('text-xs', statusStyles[item.status])}>{item.status}</Badge>
+                        </div>
+                        <div className="mt-4 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Selling Price</span>
+                                <span className="font-medium">Rs.{item.price.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Stock</span>
+                                <Badge variant={isLowStock(item) ? "destructive" : "secondary"}>
+                                    {item.quantity} in stock
+                                </Badge>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+
+            if (isPrivilegedUser) {
+                return (
+                    <Link href={`/inventory/${item.id}`} key={item.id} className="group block">
+                        {cardContent}
+                    </Link>
+                );
+            }
+            
+            return <div key={item.id}>{cardContent}</div>;
+        })}
       </div>
     </>
   );

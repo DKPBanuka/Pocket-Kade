@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from './ui/input';
 import type { AuthUser } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
+import { useLanguage } from '@/contexts/language-context';
 
 interface NewChatDialogProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ interface NewChatDialogProps {
 export function NewChatDialog({ children, users, onSelectUser }: NewChatDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { t } = useLanguage();
 
   const filteredUsers = users.filter(user =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
@@ -38,11 +40,11 @@ export function NewChatDialog({ children, users, onSelectUser }: NewChatDialogPr
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Start a new chat</DialogTitle>
+          <DialogTitle>{t('chat.new.title')}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
             <Input 
-                placeholder="Search for a user..."
+                placeholder={t('chat.new.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="mb-4"
@@ -66,7 +68,7 @@ export function NewChatDialog({ children, users, onSelectUser }: NewChatDialogPr
                         </button>
                     ))
                 ) : (
-                    <p className="text-center text-sm text-muted-foreground">No users found.</p>
+                    <p className="text-center text-sm text-muted-foreground">{t('chat.new.no_users')}</p>
                 )}
                 </div>
             </ScrollArea>

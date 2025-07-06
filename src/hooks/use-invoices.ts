@@ -231,12 +231,13 @@ export function useInvoices() {
                 const itemData = itemSnap.data() as InventoryItem;
                 const newQuantity = itemData.quantity - lineItem.quantity;
                 if (newQuantity <= itemData.reorderPoint && itemData.quantity > itemData.reorderPoint) {
-                    const message = `Low stock alert: ${itemData.name} has only ${newQuantity} items left.`;
                     const adminsSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
                     adminsSnapshot.forEach(adminDoc => {
                         const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
                         batch.set(notificationRef, {
-                            recipientUid: adminDoc.id, senderName: "System", message,
+                            recipientUid: adminDoc.id, senderName: "System", 
+                            messageKey: 'notifications.inventory.low_stock',
+                            messageParams: { item: itemData.name, count: newQuantity },
                             link: `/inventory/${lineItem.inventoryItemId}/edit`, read: false, createdAt: serverTimestamp(), type: 'low-stock'
                         });
                     });
@@ -245,13 +246,14 @@ export function useInvoices() {
         }
       }
       
-      const message = `${user.username} created a new invoice ${invoiceId} for ${newInvoiceData.customerName}.`;
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
       usersSnapshot.docs.forEach(userDoc => {
           if (userDoc.id !== user.uid) {
               const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
               batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username, message,
+                  recipientUid: userDoc.id, senderName: user.username,
+                  messageKey: 'notifications.invoices.created',
+                  messageParams: { user: user.username, invoiceId: invoiceId, customer: newInvoiceData.customerName },
                   link: `/invoice/${invoiceId}`, read: false, createdAt: serverTimestamp(), type: 'invoice'
               });
           }
@@ -343,13 +345,14 @@ export function useInvoices() {
       });
       batch.update(invoiceDocRef, finalUpdateData);
 
-      const message = `${user.username} updated invoice ${id}.`;
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
       usersSnapshot.docs.forEach(userDoc => {
           if (userDoc.id !== user.uid) {
               const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
               batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username, message,
+                  recipientUid: userDoc.id, senderName: user.username,
+                  messageKey: 'notifications.invoices.updated',
+                  messageParams: { user: user.username, invoiceId: id },
                   link: `/invoice/${id}`, read: false, createdAt: serverTimestamp(), type: 'invoice'
               });
           }
@@ -399,13 +402,14 @@ export function useInvoices() {
             }
         });
 
-        const message = `${user.username} cancelled invoice ${id}.`;
         const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
         usersSnapshot.docs.forEach(userDoc => {
             if (userDoc.id !== user.uid) {
                 const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
                 batch.set(notificationRef, {
-                    recipientUid: userDoc.id, senderName: user.username, message,
+                    recipientUid: userDoc.id, senderName: user.username,
+                    messageKey: 'notifications.invoices.cancelled',
+                    messageParams: { user: user.username, invoiceId: id },
                     link: `/invoice/${id}`, read: false, createdAt: serverTimestamp(), type: 'invoice'
                 });
             }
@@ -472,13 +476,14 @@ export function useInvoices() {
             status: newStatus
         });
         
-        const message = `${user.username} added a payment of Rs.${paymentData.amount.toFixed(2)} to invoice ${invoiceId}.`;
         const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner', 'staff'])));
         usersSnapshot.docs.forEach(userDoc => {
             if (userDoc.id !== user.uid) {
                 const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
                 batch.set(notificationRef, {
-                    recipientUid: userDoc.id, senderName: user.username, message,
+                    recipientUid: userDoc.id, senderName: user.username,
+                    messageKey: 'notifications.invoices.payment_added',
+                    messageParams: { user: user.username, amount: paymentData.amount.toFixed(2), invoiceId: invoiceId },
                     link: `/invoice/${invoiceId}`, read: false, createdAt: serverTimestamp(), type: 'invoice'
                 });
             }

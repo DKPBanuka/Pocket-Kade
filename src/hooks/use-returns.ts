@@ -152,13 +152,14 @@ export function useReturns() {
         const newReturnRef = doc(collection(db, RETURNS_COLLECTION));
         batch.set(newReturnRef, { ...newReturn, createdAt: serverTimestamp() });
         
-        const message = `${user.username} created a new return ${newReturnId}.`;
         const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner', 'staff'])));
         usersSnapshot.docs.forEach(userDoc => {
           if (userDoc.id !== user.uid) {
               const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
               batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username, message,
+                  recipientUid: userDoc.id, senderName: user.username,
+                  messageKey: 'notifications.returns.created',
+                  messageParams: { user: user.username, returnId: newReturnId },
                   link: `/returns/${newReturnRef.id}`, read: false, createdAt: serverTimestamp(), type: 'return'
               });
           }
@@ -216,7 +217,6 @@ export function useReturns() {
 
       batch.update(returnDocRef, updatePayload);
 
-      const message = `${user.username} updated return ${returnItem.returnId}.`;
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner', 'staff'])));
       
       usersSnapshot.docs.forEach(userDoc => {
@@ -225,7 +225,8 @@ export function useReturns() {
               batch.set(notificationRef, {
                   recipientUid: userDoc.id,
                   senderName: user.username,
-                  message: message,
+                  messageKey: 'notifications.returns.updated',
+                  messageParams: { user: user.username, returnId: returnItem.returnId },
                   link: `/returns/${id}`,
                   read: false,
                   createdAt: serverTimestamp(),

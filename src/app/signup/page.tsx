@@ -54,6 +54,8 @@ export default function SignupPage() {
         name: data.organizationName,
         ownerUid: user.uid,
         createdAt: serverTimestamp(),
+        onboardingCompleted: false,
+        selectedTheme: 'default',
       });
       const tenantId = orgRef.id;
 
@@ -62,6 +64,7 @@ export default function SignupPage() {
       batch.set(userDocRef, {
         username: data.username,
         email: data.email,
+        onboardingCompleted: false,
         tenants: {
           [tenantId]: 'owner',
         },

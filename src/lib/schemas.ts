@@ -19,6 +19,14 @@ export const supplierServerSchema = z.object({
   address: z.string().optional(),
 });
 
+export const organizationDetailsSchema = z.object({
+  name: z.string().min(3, 'Organization name must be at least 3 characters'),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  brn: z.string().optional(),
+});
+
+
 // Used for both add and update, quantity check is separate
 export const inventoryItemServerSchema = z.object({
   tenantId: z.string().min(1),
@@ -30,6 +38,8 @@ export const inventoryItemServerSchema = z.object({
   reorderPoint: z.number().int({ message: "Reorder point must be a whole number." }),
   status: z.enum(['Available', 'Awaiting Inspection', 'Damaged', 'For Repair']),
   warrantyPeriod: z.string().min(1, { message: "Warranty period is required." }),
+  supplierId: z.string().optional(),
+  supplierName: z.string().optional(),
 });
 
 export const returnServerSchema = z.object({
@@ -104,4 +114,49 @@ export const stockMovementServerSchema = z.object({
     quantity: z.number(),
     referenceId: z.string().optional(),
     createdByName: z.string(),
+});
+
+export const expenseServerSchema = z.object({
+  tenantId: z.string().min(1),
+  category: z.enum(['Rent', 'Salaries', 'Utilities', 'Marketing', 'Purchases', 'Other']),
+  amount: z.number().positive({ message: "Amount must be a positive number." }),
+  date: z.string().min(1, { message: "Date is required." }),
+  description: z.string().min(3, { message: "Description must be at least 3 characters." }),
+  vendor: z.string().optional(),
+  receiptUrl: z.string().url().optional().or(z.literal('')),
+  createdBy: z.string(),
+  createdByName: z.string(),
+});
+
+export const inviteUserSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  role: z.enum(['admin', 'staff'], { required_error: "Please select a role." }),
+});
+
+export const acceptInvitationSchema = z.object({
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
+
+export const updateUserProfileSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters."),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required."),
+  newPassword: z.string().min(6, "New password must be at least 6 characters."),
+}).refine(data => data.currentPassword !== data.newPassword, {
+  message: "New password must be different from the current password.",
+  path: ["newPassword"],
+});
+
+export const organizationSettingsSchema = z.object({
+  name: z.string().min(3, 'Organization name must be at least 3 characters.'),
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  brn: z.string().optional(),
+});
+
+export const organizationThemeSchema = z.object({
+  selectedTheme: z.enum(['light', 'dark', 'system']),
 });

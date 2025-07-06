@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import type { AuthUser } from '@/lib/types';
+import type { AuthUser, UserRole } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, deleteField } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 
 const USERS_COLLECTION = 'users';
@@ -37,7 +37,6 @@ export function useUsers() {
             email: data.email,
             username: data.username,
             tenants: data.tenants || {},
-            // This hook returns a list of users in the tenant, so their active roles aren't relevant here.
             activeRole: data.tenants[currentUser.activeTenantId!], 
             activeTenantId: currentUser.activeTenantId,
           } as AuthUser;
@@ -55,5 +54,49 @@ export function useUsers() {
     return () => unsubscribe();
   }, [toast, currentUser]);
   
-  return { users, isLoading };
+  const changeUserRole = useCallback(async (targetUid: string, newRole: UserRole) => {
+    if (currentUser?.activeRole !== 'owner' || !currentUser.activeTenantId) {
+        toast({ title: "Permission Denied", description: "Only the owner can change roles.", variant: "destructive" });
+        return;
+    }
+    if (currentUser.uid === targetUid) {
+        toast({ title: "Action Not Allowed", description: "You cannot change your own role.", variant: "destructive"});
+        return;
+    }
+
+    const userDocRef = doc(db, USERS_COLLECTION, targetUid);
+    try {
+        await updateDoc(userDocRef, {
+            [`tenants.${currentUser.activeTenantId}`]: newRole
+        });
+        toast({ title: "Role Updated", description: "The user's role has been successfully changed." });
+    } catch (error) {
+        console.error("Error changing user role:", error);
+        toast({ title: "Error", description: "Failed to update the user's role.", variant: "destructive" });
+    }
+  }, [currentUser, toast]);
+
+  const removeUserFromTenant = useCallback(async (targetUid: string) => {
+    if (currentUser?.activeRole !== 'owner' || !currentUser.activeTenantId) {
+        toast({ title: "Permission Denied", description: "Only the owner can remove users.", variant: "destructive" });
+        return;
+    }
+    if (currentUser.uid === targetUid) {
+        toast({ title: "Action Not Allowed", description: "You cannot remove yourself from the organization.", variant: "destructive"});
+        return;
+    }
+      
+    const userDocRef = doc(db, USERS_COLLECTION, targetUid);
+    try {
+      await updateDoc(userDocRef, {
+          [`tenants.${currentUser.activeTenantId}`]: deleteField()
+      });
+      toast({ title: "User Removed", description: "The user has been removed from the organization." });
+    } catch (error) {
+        console.error("Error removing user:", error);
+        toast({ title: "Error", description: "Failed to remove the user.", variant: "destructive" });
+    }
+  }, [currentUser, toast]);
+
+  return { users, isLoading, changeUserRole, removeUserFromTenant };
 }

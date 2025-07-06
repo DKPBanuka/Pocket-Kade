@@ -91,7 +91,7 @@ export default function ReturnList({ returns }: ReturnListProps) {
       <div className="md:hidden space-y-4">
         {returns.map((item) => (
           <Link href={`/returns/${item.id}`} key={item.id} className="group">
-             <Card className="bg-white transition-shadow duration-200 group-hover:shadow-md">
+             <Card className="transition-shadow duration-200 group-hover:shadow-md">
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <CardTitle className="text-base">{item.inventoryItemName}</CardTitle>

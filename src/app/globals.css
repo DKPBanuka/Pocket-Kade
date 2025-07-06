@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,11 +7,11 @@
   :root {
     --background: 208 100% 97%; /* Alice Blue */
     --foreground: 224 71% 4%; /* Dark Blue */
-    --card: 0 0% 100%;
+    --card: 0 0% 100% / 0.6; /* Semi-transparent white */
     --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
-    --primary: 204 90% 53%; /* Sky Blue */
+    --primary: 210 100% 56%; /* Vivid Blue from image */
     --primary-foreground: 0 0% 100%;
     --secondary: 215 28% 93%;
     --secondary-foreground: 224 71% 4%;
@@ -20,9 +21,9 @@
     --accent-foreground: 120 40% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 215 20% 87%;
+    --border: 215 20% 87% / 0.5; /* Semi-transparent border */
     --input: 0 0% 100%;
-    --ring: 204 90% 53%;
+    --ring: 210 100% 56%; /* Vivid Blue from image */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -33,19 +34,19 @@
     --sidebar-background: 215 28% 93%;
     --sidebar-foreground: 224 71% 4%;
     --sidebar-border: 215 20% 87%;
-    --sidebar-accent: 204 90% 53%;
+    --sidebar-accent: 210 100% 56%; /* Vivid Blue from image */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-ring: 204 90% 53%;
+    --sidebar-ring: 210 100% 56%; /* Vivid Blue from image */
   }
  
   .dark {
     --background: 224 71% 4%;
     --foreground: 0 0% 98%;
-    --card: 224 71% 4%;
+    --card: 224 71% 10% / 0.5; /* Semi-transparent dark blue */
     --card-foreground: 0 0% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 0 0% 98%;
-    --primary: 204 90% 53%;
+    --primary: 210 100% 56%; /* Vivid Blue from image */
     --primary-foreground: 0 0% 100%;
     --secondary: 215 28% 15%;
     --secondary-foreground: 0 0% 98%;
@@ -55,16 +56,16 @@
     --accent-foreground: 120 50% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 215 28% 15%;
+    --border: 215 28% 25% / 0.5; /* Semi-transparent border */
     --input: 215 28% 15%;
-    --ring: 204 90% 53%;
+    --ring: 210 100% 56%; /* Vivid Blue from image */
     
     --sidebar-background: 224 71% 4%;
     --sidebar-foreground: 0 0% 98%;
     --sidebar-border: 215 28% 15%;
-    --sidebar-accent: 204 90% 53%;
+    --sidebar-accent: 210 100% 56%; /* Vivid Blue from image */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-ring: 204 90% 53%;
+    --sidebar-ring: 210 100% 56%; /* Vivid Blue from image */
   }
 }
  
@@ -74,18 +75,41 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: linear-gradient(to top right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1), hsl(var(--background)));
+  }
+
+  @supports (backdrop-filter: blur(1rem)) {
+    .card {
+      @apply backdrop-blur-lg;
+    }
   }
 }
 
 @media print {
+  @page {
+    size: auto;
+    margin: 0mm;
+  }
   body {
     background: white !important;
     color: black !important;
+    margin: 0;
   }
   .no-print {
     display: none !important;
   }
   .print-show {
     display: block !important;
+  }
+  .print-container {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .print-wrapper {
+    min-height: 0 !important;
+    background: white !important;
   }
 }

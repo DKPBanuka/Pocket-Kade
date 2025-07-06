@@ -15,10 +15,12 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import type { Invoice, InventoryItem } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useInventory } from '@/hooks/use-inventory';
+import { useLanguage } from '@/contexts/language-context';
 
 const formatCurrency = (amount: number) => `Rs.${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function DetailedSalesAnalysis({ invoices }: { invoices: Invoice[] }) {
+    const { t } = useLanguage();
     const [viewMode, setViewMode] = useState<'day' | 'month'>('day');
     const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -110,8 +112,8 @@ function DetailedSalesAnalysis({ invoices }: { invoices: Invoice[] }) {
             <CardHeader>
                 <Tabs defaultValue="day" onValueChange={(value) => setViewMode(value as 'day' | 'month')}>
                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="day">Daily View</TabsTrigger>
-                        <TabsTrigger value="month">Monthly View</TabsTrigger>
+                        <TabsTrigger value="day">{t('analysis.sales.daily_view')}</TabsTrigger>
+                        <TabsTrigger value="month">{t('analysis.sales.monthly_view')}</TabsTrigger>
                     </TabsList>
                 </Tabs>
                 <div className="flex items-center justify-between pt-4">
@@ -127,7 +129,7 @@ function DetailedSalesAnalysis({ invoices }: { invoices: Invoice[] }) {
             <CardContent className="space-y-6">
                  <div className="h-64 w-full overflow-x-auto overflow-y-hidden">
                     <div style={{ width: typeof chartWidth === 'string' ? chartWidth : `${chartWidth}px`, height: '100%' }}>
-                         <ChartContainer config={{ revenue: { label: 'Revenue', color: 'hsl(var(--primary))' } }} className="h-full w-full [aspect-ratio:auto]">
+                         <ChartContainer config={{ revenue: { label: t('analysis.sales.total_revenue'), color: 'hsl(var(--primary))' } }} className="h-full w-full [aspect-ratio:auto]">
                             <BarChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                  <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} interval={0} />
@@ -150,16 +152,16 @@ function DetailedSalesAnalysis({ invoices }: { invoices: Invoice[] }) {
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                        <p className="text-sm text-muted-foreground">Total Revenue</p>
+                        <p className="text-sm text-muted-foreground">{t('analysis.sales.total_revenue')}</p>
                         <p className="font-bold text-lg">{formatCurrency(summaryStats.total)}</p>
                     </div>
                      <div>
-                        <p className="text-sm text-muted-foreground">Average Revenue/{viewMode}</p>
+                        <p className="text-sm text-muted-foreground">{t('analysis.sales.avg_revenue', { period: viewMode })}</p>
                         <p className="font-bold text-lg">{formatCurrency(summaryStats.average)}</p>
                     </div>
                 </div>
                 <div>
-                    <h4 className="font-semibold mb-3">Top Selling Products ({viewMode === 'day' ? 'This Month' : 'This Year'})</h4>
+                    <h4 className="font-semibold mb-3">{t('analysis.sales.top_products_title', { period: viewMode === 'day' ? t('analysis.sales.this_month') : t('analysis.sales.this_year') })}</h4>
                     <div className="space-y-3">
                         {topProducts.length > 0 ? topProducts.map(product => (
                             <div key={product.name} className="flex items-center gap-3">
@@ -168,12 +170,12 @@ function DetailedSalesAnalysis({ invoices }: { invoices: Invoice[] }) {
                                 </div>
                                 <div className="flex-1">
                                     <p className="font-medium text-sm">{product.name}</p>
-                                    <p className="text-xs text-muted-foreground">{product.quantity} units sold</p>
+                                    <p className="text-xs text-muted-foreground">{t('analysis.sales.units_sold', { quantity: product.quantity })}</p>
                                 </div>
                                 <p className="font-semibold text-sm">{formatCurrency(product.revenue)}</p>
                             </div>
                         )) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">No product sales data for this period.</p>
+                            <p className="text-sm text-muted-foreground text-center py-4">{t('analysis.sales.no_sales_data')}</p>
                         )}
                     </div>
                 </div>
@@ -187,6 +189,7 @@ export default function SalesAnalysisPage() {
     const { invoices, isLoading: invoicesLoading } = useInvoices();
     const { inventory, isLoading: inventoryLoading } = useInventory();
     const { user, isLoading: authLoading } = useAuth();
+    const { t } = useLanguage();
     const isLoading = invoicesLoading || authLoading || inventoryLoading;
 
     if (!authLoading && user?.activeRole === 'staff') {
@@ -202,15 +205,15 @@ export default function SalesAnalysisPage() {
             <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                     <h1 className="text-3xl font-bold font-headline tracking-tight">
-                        Sales Analysis
+                        {t('analysis.sales.title')}
                     </h1>
                     <p className="text-muted-foreground">
-                        An interactive breakdown of your sales performance.
+                        {t('analysis.sales.desc')}
                     </p>
                 </div>
                 <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+                    {t('general.back')}
                 </Button>
             </div>
             {isLoading ? (

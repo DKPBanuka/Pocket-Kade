@@ -17,6 +17,7 @@ import type { Conversation, Message } from '@/lib/types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
+import { useLanguage } from '@/contexts/language-context';
 
 function ConversationList({
   conversations,
@@ -30,6 +31,7 @@ function ConversationList({
   isLoading: boolean;
 }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   if (isLoading) {
     return (
@@ -48,14 +50,14 @@ function ConversationList({
   }
 
   if (conversations.length === 0) {
-    return <p className="p-4 text-center text-sm text-muted-foreground">No conversations yet.</p>;
+    return <p className="p-4 text-center text-sm text-muted-foreground">{t('chat.no_convos')}</p>;
   }
 
   const formatTimestamp = (timestamp: any) => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
     if (isToday(date)) return format(date, 'p');
-    if (isYesterday(date)) return 'Yesterday';
+    if (isYesterday(date)) return t('chat.yesterday');
     return format(date, 'P');
   };
 
@@ -81,7 +83,7 @@ function ConversationList({
             <div className="flex-1 truncate">
               <p className="font-semibold">{otherUsername}</p>
               <p className={cn("truncate text-sm", unreadCount > 0 ? "text-foreground font-semibold" : "text-muted-foreground")}>
-                {convo.lastMessageSenderId === user?.uid && 'You: '}{convo.lastMessage}
+                {convo.lastMessageSenderId === user?.uid && t('chat.you')}{convo.lastMessage}
               </p>
             </div>
             <div className="flex flex-col items-end self-start text-xs text-muted-foreground">
@@ -96,9 +98,10 @@ function ConversationList({
 }
 
 function DateSeparator({ date }: { date: Date }) {
+    const { t } = useLanguage();
     const getFormattedDate = () => {
-        if (isToday(date)) return 'Today';
-        if (isYesterday(date)) return 'Yesterday';
+        if (isToday(date)) return t('chat.today');
+        if (isYesterday(date)) return t('chat.yesterday');
         return format(date, 'MMMM d, yyyy');
     }
 
@@ -132,6 +135,7 @@ function ChatWindow({
   onBack: () => void;
 }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [text, setText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -180,7 +184,7 @@ function ChatWindow({
              <Avatar className="h-9 w-9 border md:hidden">
               <AvatarFallback>{otherUsername?.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <h2 className="font-semibold">{otherUsername || 'Select a conversation'}</h2>
+            <h2 className="font-semibold">{otherUsername || t('chat.select_convo')}</h2>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-4 bg-secondary/20">
@@ -233,7 +237,7 @@ function ChatWindow({
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={t('chat.type_message')}
             className="pr-12"
             onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -256,6 +260,7 @@ function ChatWindow({
 export default function ChatLayout() {
   const { user } = useAuth();
   const { users } = useUsers();
+  const { t } = useLanguage();
   const { 
     conversations, 
     isLoadingConversations, 
@@ -295,7 +300,7 @@ export default function ChatLayout() {
             selectedConversationId ? 'hidden md:flex' : 'flex'
           )}>
           <CardHeader className="flex flex-row items-center justify-between p-4">
-            <h2 className="text-xl font-bold">Chats</h2>
+            <h2 className="text-xl font-bold">{t('chat.title')}</h2>
             <NewChatDialog users={availableUsers} onSelectUser={handleCreateOrSelectConversation}>
                 <Button variant="ghost" size="icon">
                     <Users className="h-5 w-5" />
@@ -329,9 +334,9 @@ export default function ChatLayout() {
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-4">
                     <MessageSquare className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold font-headline">Welcome to your Inbox</h3>
+                <h3 className="text-xl font-semibold font-headline">{t('chat.welcome_title')}</h3>
                 <p className="max-w-xs text-muted-foreground mt-2">
-                    Select a conversation from the sidebar to begin messaging your team.
+                    {t('chat.welcome_desc')}
                 </p>
              </div>
           )}
