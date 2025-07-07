@@ -88,28 +88,29 @@
 @media print {
   @page {
     size: auto;
-    margin: 0mm;
+    margin: 0;
   }
   body {
     background: white !important;
     color: black !important;
-    margin: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .no-print {
     display: none !important;
   }
-  .print-show {
-    display: block !important;
+  .print-page-container {
+    padding: 1rem !important; /* Some margin on the paper */
+    margin: 0 !important;
+    background: none !important;
+    min-height: 0 !important;
   }
-  .print-container {
+  .print-page-container .container { /* Remove container constraints */
+      max-width: none !important;
+      padding: 0 !important;
+  }
+  .print-invoice-card {
     box-shadow: none !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0 !important;
-    height: auto !important;
-    min-height: 0 !important;
-  }
-  .print-wrapper {
-    min-height: 0 !important;
-    background: white !important;
+    border: none !important;
   }
 }

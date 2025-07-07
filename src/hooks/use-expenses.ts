@@ -64,25 +64,28 @@ export function useExpenses() {
     return () => unsubscribe();
   }, [toast, user]);
   
-  const uploadReceipt = async (file: File): Promise<string> => {
+  const uploadReceipt = async (file: File): Promise<{ url: string, path: string }> => {
       if (!user?.activeTenantId) throw new Error("User not authenticated");
       const filePath = `receipts/${user.activeTenantId}/${Date.now()}-${file.name}`;
       const storageRef = ref(storage, filePath);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
+      return { url: downloadURL, path: filePath };
   }
 
-  const addExpense = useCallback(async (expenseData: Omit<Expense, 'id' | 'createdAt' | 'createdBy' | 'createdByName' | 'tenantId' | 'receiptUrl'>, receiptFile?: File) => {
+  const addExpense = useCallback(async (expenseData: Omit<Expense, 'id' | 'createdAt' | 'createdBy' | 'createdByName' | 'tenantId' | 'receiptUrl' | 'receiptPath'>, receiptFile?: File) => {
      if (!user?.activeTenantId || !user.username) {
       toast({ title: "Error", description: "No active organization selected.", variant: "destructive" });
       return;
     }
     
     let receiptUrl = '';
+    let receiptPath = '';
     if (receiptFile) {
         try {
-            receiptUrl = await uploadReceipt(receiptFile);
+            const uploadResult = await uploadReceipt(receiptFile);
+            receiptUrl = uploadResult.url;
+            receiptPath = uploadResult.path;
         } catch (error) {
              console.error("Error uploading receipt:", error);
              toast({ title: "Upload Error", description: "Failed to upload receipt.", variant: "destructive" });
@@ -95,7 +98,8 @@ export function useExpenses() {
         tenantId: user.activeTenantId,
         createdBy: user.uid,
         createdByName: user.username,
-        receiptUrl: receiptUrl
+        receiptUrl: receiptUrl,
+        receiptPath: receiptPath,
     };
     
     const validationResult = expenseServerSchema.safeParse(dataToValidate);
@@ -123,27 +127,60 @@ export function useExpenses() {
     return expenses.find(e => e.id === id);
   }, [expenses]);
 
-  const updateExpense = useCallback(async (id: string, updatedData: Partial<Omit<Expense, 'id' | 'createdAt' | 'createdBy' | 'createdByName' | 'tenantId' | 'receiptUrl'>>, newReceiptFile?: File) => {
+  const updateExpense = useCallback(async (id: string, updatedData: Partial<Omit<Expense, 'id' | 'createdAt' | 'createdBy' | 'createdByName' | 'tenantId' | 'receiptUrl' | 'receiptPath'>>, newReceiptFile?: File | null) => {
+    if (!user?.activeTenantId) {
+      toast({ title: "Error", description: "No active organization selected.", variant: "destructive" });
+      return;
+    }
+
     const existingExpense = expenses.find(e => e.id === id);
-    if (!existingExpense) return;
+    if (!existingExpense) {
+      toast({ title: "Error", description: "Expense not found.", variant: "destructive" });
+      return;
+    }
     
-    let newReceiptUrl = existingExpense.receiptUrl;
+    let newReceiptUrl = existingExpense.receiptUrl || '';
+    let newReceiptPath = existingExpense.receiptPath || '';
+
+    const deleteOldReceipt = async () => {
+      if (existingExpense.receiptPath) {
+        try {
+          const oldReceiptRef = ref(storage, existingExpense.receiptPath);
+          await deleteObject(oldReceiptRef);
+        } catch (deleteError) {
+          console.warn("Could not delete old receipt:", deleteError);
+        }
+      }
+    };
+
+    // Case 1: A new file is being uploaded.
     if (newReceiptFile) {
         try {
-            newReceiptUrl = await uploadReceipt(newReceiptFile);
-            // If there was an old receipt, delete it
-            if(existingExpense.receiptUrl) {
-                const oldReceiptRef = ref(storage, existingExpense.receiptUrl);
-                await deleteObject(oldReceiptRef);
-            }
+            await deleteOldReceipt(); // Delete old one if it exists
+            const uploadResult = await uploadReceipt(newReceiptFile);
+            newReceiptUrl = uploadResult.url;
+            newReceiptPath = uploadResult.path;
         } catch (error) {
              console.error("Error uploading new receipt:", error);
              toast({ title: "Upload Error", description: "Failed to upload new receipt.", variant: "destructive" });
              return;
         }
+    } 
+    // Case 2: The existing file should be deleted.
+    else if (newReceiptFile === null) {
+        await deleteOldReceipt();
+        newReceiptUrl = '';
+        newReceiptPath = '';
     }
+    // Case 3 (newReceiptFile is undefined): Do nothing, keep the old receipt.
 
-    const validationResult = expenseServerSchema.partial().safeParse({ ...updatedData, receiptUrl: newReceiptUrl });
+    const dataToUpdate = {
+        ...updatedData,
+        receiptUrl: newReceiptUrl,
+        receiptPath: newReceiptPath,
+    };
+
+    const validationResult = expenseServerSchema.partial().safeParse(dataToUpdate);
     if (!validationResult.success) {
       const errorMessage = validationResult.error.errors.map(e => e.message).join('\n');
       toast({ title: "Invalid Expense Data", description: errorMessage, variant: "destructive" });
@@ -152,25 +189,26 @@ export function useExpenses() {
     
     const expenseDocRef = doc(db, EXPENSES_COLLECTION, id);
     try {
-      const dataToUpdate: any = { ...validationResult.data };
-      if (dataToUpdate.date) {
-        dataToUpdate.date = new Date(dataToUpdate.date); // Convert date string back to object
+      const finalDataToUpdate: any = { ...validationResult.data };
+      
+      if (finalDataToUpdate.date) {
+        finalDataToUpdate.date = new Date(finalDataToUpdate.date);
       }
       
-      await updateDoc(expenseDocRef, dataToUpdate);
+      await updateDoc(expenseDocRef, finalDataToUpdate);
       toast({ title: "Expense Updated", description: `Expense has been successfully updated.` });
     } catch (error) {
       console.error("Error updating expense:", error);
       toast({ title: "Error", description: "Failed to update expense.", variant: "destructive" });
     }
-  }, [expenses, toast]);
+  }, [expenses, toast, user]);
 
   const deleteExpense = useCallback(async (id: string) => {
     const expenseToDelete = expenses.find(e => e.id === id);
     if (!expenseToDelete) return;
     try {
-      if (expenseToDelete.receiptUrl) {
-        const receiptRef = ref(storage, expenseToDelete.receiptUrl);
+      if (expenseToDelete.receiptPath) {
+        const receiptRef = ref(storage, expenseToDelete.receiptPath);
         await deleteObject(receiptRef);
       }
       await deleteDoc(doc(db, EXPENSES_COLLECTION, id));

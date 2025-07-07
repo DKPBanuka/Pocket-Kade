@@ -9,13 +9,14 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { organizationSettingsSchema } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/language-context';
 import { updateOrganizationAction } from '@/app/actions';
+import { Separator } from './ui/separator';
 
 type FormData = z.infer<typeof organizationSettingsSchema>;
 
@@ -31,6 +32,9 @@ export function OrganizationSettings() {
       address: organization?.address || '',
       phone: organization?.phone || '',
       brn: organization?.brn || '',
+      email: organization?.email || '',
+      invoiceThankYouMessage: organization?.invoiceThankYouMessage || '',
+      invoiceSignature: organization?.invoiceSignature || '',
     },
   });
 
@@ -54,12 +58,12 @@ export function OrganizationSettings() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t('settings.organization.title')}</CardTitle>
-        <CardDescription>{t('settings.organization.desc')}</CardDescription>
-      </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardHeader>
+            <CardTitle>{t('settings.organization.title')}</CardTitle>
+            <CardDescription>{t('settings.organization.desc')}</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
@@ -107,12 +111,57 @@ export function OrganizationSettings() {
                     )}
                 />
             </div>
+             <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Organization Email</FormLabel>
+                    <FormControl><Input type="email" placeholder="contact@yourbusiness.com" {...field} /></FormControl>
+                    <FormDescription>This email will be displayed on invoices.</FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+              />
           </CardContent>
-          <CardContent>
+
+          <Separator className="my-6" />
+
+          <CardHeader className="pt-0">
+            <CardTitle>Invoice Customization</CardTitle>
+            <CardDescription>These details will appear on all your invoice templates.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <FormField
+              control={form.control}
+              name="invoiceThankYouMessage"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Thank You Message</FormLabel>
+                  <FormControl><Textarea placeholder="Thank you for your business!" {...field} /></FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="invoiceSignature"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Signature / Authorized Person</FormLabel>
+                  <FormControl><Input placeholder="e.g. John Doe, Manager" {...field} /></FormControl>
+                  <FormDescription>This name will appear in the signature area of the invoice.</FormDescription>
+                  <FormMessage />
+                  </FormItem>
+              )}
+            />
+          </CardContent>
+
+          <CardFooter>
              <Button type="submit" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('settings.profile.save_btn')}
             </Button>
-          </CardContent>
+          </CardFooter>
         </form>
       </Form>
     </Card>

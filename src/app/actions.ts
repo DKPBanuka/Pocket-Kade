@@ -15,11 +15,13 @@ import {
   writeBatch,
   doc,
   updateDoc,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserRole } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { updateUserProfileSchema, organizationSettingsSchema, organizationThemeSchema } from '@/lib/schemas';
+import { updateUserProfileSchema, organizationSettingsSchema, organizationThemeSchema, organizationInvoiceSettingsSchema } from '@/lib/schemas';
+import type * as z from 'zod';
 
 
 export async function suggestLineItemAction(
@@ -160,7 +162,7 @@ export async function updateUserProfileAction(
 
 export async function updateOrganizationAction(
   tenantId: string,
-  data: { name: string; address?: string; phone?: string, brn?: string }
+  data: z.infer<typeof organizationSettingsSchema>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const validationResult = organizationSettingsSchema.safeParse(data);
@@ -197,5 +199,50 @@ export async function updateOrganizationThemeAction(
   } catch (error) {
     console.error('Error updating organization theme:', error);
     return { success: false, error: 'Could not update theme.' };
+  }
+}
+
+export async function updateOrganizationInvoiceSettingsAction(
+  tenantId: string,
+  data: { invoiceTemplate?: string; invoiceColor?: string }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const validationResult = organizationInvoiceSettingsSchema.safeParse(data);
+    if (!validationResult.success) {
+      return { success: false, error: validationResult.error.errors.map(e => e.message).join(', ') };
+    }
+
+    const orgRef = doc(db, 'organizations', tenantId);
+    
+    const orgSnap = await getDoc(orgRef);
+    if (!orgSnap.exists()) {
+        return { success: false, error: "Organization not found." };
+    }
+    const orgData = orgSnap.data();
+    const recentColors: string[] = orgData.recentInvoiceColors || [];
+    const newColor = validationResult.data.invoiceColor;
+
+    let updatedRecentColors = [...recentColors];
+
+    if (newColor && !updatedRecentColors.includes(newColor)) {
+        updatedRecentColors.unshift(newColor);
+        if (updatedRecentColors.length > 5) {
+            updatedRecentColors = updatedRecentColors.slice(0, 5);
+        }
+    }
+
+    const finalUpdateData = {
+        ...validationResult.data,
+        recentInvoiceColors: updatedRecentColors
+    };
+
+    await updateDoc(orgRef, finalUpdateData);
+    
+    revalidatePath('/invoices');
+    revalidatePath('/invoice/[id]', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating organization invoice settings:', error);
+    return { success: false, error: 'Could not update invoice settings.' };
   }
 }

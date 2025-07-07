@@ -1,4 +1,6 @@
 
+"use client";
+
 import type { Invoice, LineItem, Payment, Organization } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -11,13 +13,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
-import Logo from './logo';
-import { Badge } from './ui/badge';
+import Logo from '../logo';
+import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 
-interface InvoiceViewProps {
+interface TemplateProps {
   invoice: Invoice;
   organization: Organization | null;
+  invoiceColor?: string | null;
 }
 
 const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string => {
@@ -44,7 +47,7 @@ const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string =
     return format(date, 'PPP');
 };
 
-export default function InvoiceView({ invoice, organization }: InvoiceViewProps) {
+export default function ClassicTemplate({ invoice, organization, invoiceColor }: TemplateProps) {
   const subtotal = invoice.lineItems.reduce(
     (acc, item) => acc + item.quantity * item.price,
     0
@@ -64,24 +67,21 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
   const amountPaid = invoice.payments?.reduce((acc, p) => acc + p.amount, 0) || 0;
   const amountDue = total - amountPaid;
   
+  const colorStyle = invoiceColor ? { color: invoiceColor } : {};
+  
   return (
-    <Card className="print-invoice-card w-full rounded-xl shadow-lg">
+    <Card className="print-container w-full rounded-xl shadow-lg">
       <CardHeader className="p-4 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <div className="no-print">
-              <Logo />
-            </div>
-            <div className="hidden print:block">
-               <h1 className="text-2xl font-bold font-headline text-foreground">
-                    {organization?.name || 'Your Company Name'}
-                </h1>
-                {organization?.address && <p className="text-sm text-muted-foreground whitespace-pre-line">{organization.address}</p>}
-                {organization?.phone && <p className="text-sm text-muted-foreground">{organization.phone}</p>}
-            </div>
+            <h1 className="text-2xl font-bold font-headline text-foreground">
+                {organization?.name || 'Your Company Name'}
+            </h1>
+            {organization?.address && <p className="text-sm text-muted-foreground whitespace-pre-line">{organization.address}</p>}
+            {organization?.phone && <p className="text-sm text-muted-foreground">{organization.phone}</p>}
           </div>
           <div className="text-left sm:text-right flex-shrink-0">
-            <h2 className="text-3xl font-bold font-headline text-primary">INVOICE</h2>
+            <h2 className="text-3xl font-bold font-headline" style={colorStyle}>INVOICE</h2>
             <p className="text-muted-foreground mt-1">{invoice.id}</p>
             <div className="mt-2">
                  <Badge className={cn(
@@ -97,7 +97,7 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
           </div>
         </div>
         <Separator className="my-4 sm:my-6" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+        <div className="grid grid-cols-1 text-sm">
             <div className="flex flex-col gap-4">
                 <div>
                     <p className="text-muted-foreground font-semibold">Billed To</p>
@@ -110,11 +110,6 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
                     <p className="text-muted-foreground font-semibold">Invoice Date</p>
                     <p>{format(new Date(invoice.createdAt), 'PPP')}</p>
                 </div>
-            </div>
-            <div className="text-left sm:text-right no-print">
-                <p className="text-muted-foreground font-semibold">From</p>
-                <p className="font-medium">{invoice.createdByName}</p>
-                {organization?.phone && <p>{organization.phone}</p>}
             </div>
         </div>
       </CardHeader>
@@ -154,36 +149,59 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
         </div>
 
         <Separator className="my-4 sm:my-6" />
+        
         <div className="flex justify-end">
             <div className="w-full max-w-sm space-y-2 text-sm">
-                <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>Rs.{subtotal.toFixed(2)}</span>
-                </div>
-                 {(invoice.discountValue || 0) > 0 && (
-                    <div className="flex justify-between text-muted-foreground">
-                        <span>{discountLabel}</span>
-                        <span>-Rs.{discountAmount.toFixed(2)}</span>
-                    </div>
-                 )}
-                 <Separator/>
-                 <div className="flex justify-between font-bold text-base">
-                    <span>Total</span>
-                    <span>Rs.{total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-muted-foreground">
-                    <span>Amount Paid</span>
-                    <span>-Rs.{amountPaid.toFixed(2)}</span>
-                </div>
-                 <Separator/>
-                 <div className="flex justify-between font-bold text-base">
-                    <span>Amount Due</span>
-                    <span className="text-primary" style={organization?.invoiceColor ? { color: organization.invoiceColor } : {}}>Rs.{amountDue.toFixed(2)}</span>
-                </div>
+                {invoice.status === 'Paid' ? (
+                    <>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span>Rs.{subtotal.toFixed(2)}</span>
+                        </div>
+                        {(invoice.discountValue || 0) > 0 && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>{discountLabel}</span>
+                                <span>-Rs.{discountAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <Separator/>
+                        <div className="flex justify-between font-bold text-lg" style={colorStyle}>
+                            <span>TOTAL PAID</span>
+                            <span>Rs.{total.toFixed(2)}</span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span>Rs.{subtotal.toFixed(2)}</span>
+                        </div>
+                        {(invoice.discountValue || 0) > 0 && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>{discountLabel}</span>
+                                <span>-Rs.{discountAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        <Separator/>
+                        <div className="flex justify-between font-bold text-base">
+                            <span>Total</span>
+                            <span>Rs.{total.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                            <span>Amount Paid</span>
+                            <span>-Rs.{amountPaid.toFixed(2)}</span>
+                        </div>
+                        <Separator/>
+                        <div className="flex justify-between font-bold text-base">
+                            <span>Amount Due</span>
+                            <span style={colorStyle}>Rs.{amountDue.toFixed(2)}</span>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
         
-        {invoice.payments && invoice.payments.length > 0 && (
+        {invoice.status !== 'Paid' && invoice.payments && invoice.payments.length > 0 && (
             <div className="mt-8 no-print">
                 <h3 className="font-semibold mb-2">Payment History</h3>
                 <div className="rounded-md border">
@@ -210,9 +228,16 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
         )}
 
       </CardContent>
-      <CardFooter className="p-4 sm:p-6 md:p-8 pt-0">
-        <div className="text-sm text-muted-foreground no-print">
-            <p>If you have any questions, please contact us at 0756438091.</p>
+      <CardFooter className="p-4 sm:p-6 md:p-8 pt-0 flex-col items-start gap-4">
+        {organization?.invoiceSignature && (
+            <div className="pt-12 text-sm">
+                <div className="border-t-2 border-gray-400 w-48"></div>
+                <p className="mt-2 font-semibold">{organization.invoiceSignature}</p>
+            </div>
+        )}
+        <div className="text-sm text-muted-foreground">
+            <p>{organization?.invoiceThankYouMessage || 'Thank you for your business!'}</p>
+            {organization?.email && <p>Contact us at: {organization.email}</p>}
         </div>
       </CardFooter>
     </Card>

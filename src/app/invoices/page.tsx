@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, Download } from 'lucide-react';
+import { Plus, Search, FileText, Download, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useInvoices } from '@/hooks/use-invoices';
@@ -16,6 +16,7 @@ import type { Invoice, InvoiceStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { exportToCsv } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
+import { InvoiceSettingsDialog } from '@/components/invoice-settings-dialog';
 
 const calculateTotal = (invoice: Invoice): number => {
   const subtotal = invoice.lineItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
@@ -102,6 +103,8 @@ export default function InvoicesPage() {
     exportToCsv(dataToExport, `invoices-${new Date().toISOString().split('T')[0]}`, headers);
   };
 
+  const isPrivilegedUser = user?.activeRole === 'admin' || user?.activeRole === 'owner';
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -127,14 +130,22 @@ export default function InvoicesPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  {t('invoices.export')}
+              {isPrivilegedUser && (
+                <InvoiceSettingsDialog>
+                    <Button variant="outline" size="sm" className="w-9 px-0 sm:w-auto sm:px-3">
+                        <Settings className="h-4 w-4" />
+                        <span className="sr-only sm:not-sr-only sm:ml-2">Customize</span>
+                    </Button>
+                </InvoiceSettingsDialog>
+              )}
+              <Button variant="outline" onClick={handleExport} size="sm" className="w-9 px-0 sm:w-auto sm:px-3">
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only sm:not-sr-only sm:ml-2">{t('invoices.export')}</span>
               </Button>
               <Link href="/invoice/new" passHref>
                 <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('invoices.new')}
+                  <Plus className="h-5 w-5" />
+                  <span className="sm:ml-2">{t('invoices.new')}</span>
                 </Button>
               </Link>
           </div>

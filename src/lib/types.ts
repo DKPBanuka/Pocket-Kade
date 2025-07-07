@@ -22,7 +22,13 @@ export interface Organization {
   address?: string;
   phone?: string;
   brn?: string;
+  email?: string;
+  invoiceThankYouMessage?: string;
+  invoiceSignature?: string;
   selectedTheme?: string;
+  invoiceTemplate?: 'classic' | 'modern' | 'corporate' | 'creative';
+  invoiceColor?: string;
+  recentInvoiceColors?: string[];
 }
 
 export interface Customer {
@@ -181,6 +187,7 @@ export interface Expense {
   description: string;
   vendor?: string;
   receiptUrl?: string;
+  receiptPath?: string;
   createdBy: string; // user uid
   createdByName: string;
   createdAt: string; // ISO String

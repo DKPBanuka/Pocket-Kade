@@ -124,6 +124,7 @@ export const expenseServerSchema = z.object({
   description: z.string().min(3, { message: "Description must be at least 3 characters." }),
   vendor: z.string().optional(),
   receiptUrl: z.string().url().optional().or(z.literal('')),
+  receiptPath: z.string().optional(),
   createdBy: z.string(),
   createdByName: z.string(),
 });
@@ -155,8 +156,16 @@ export const organizationSettingsSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   brn: z.string().optional(),
+  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
+  invoiceThankYouMessage: z.string().optional(),
+  invoiceSignature: z.string().optional(),
 });
 
 export const organizationThemeSchema = z.object({
   selectedTheme: z.enum(['light', 'dark', 'system']),
+});
+
+export const organizationInvoiceSettingsSchema = z.object({
+  invoiceTemplate: z.enum(['classic', 'modern', 'corporate', 'creative']).optional(),
+  invoiceColor: z.string().optional(),
 });
