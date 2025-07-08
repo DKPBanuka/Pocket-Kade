@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Invoice, Organization } from '@/lib/types';
+import type { Invoice, LineItem, Organization } from '@/lib/types';
 import { format } from 'date-fns';
 import { FileText, Feather, Phone, Mail, MapPin } from 'lucide-react';
 
@@ -10,6 +10,31 @@ interface TemplateProps {
   organization: Organization | null;
   invoiceColor?: string | null;
 }
+
+const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string => {
+    const date = new Date(startDate);
+    if (warrantyPeriod === 'N/A') return 'N/A';
+    
+    const parts = warrantyPeriod.split(' ');
+    if (parts.length !== 2) return 'N/A';
+
+    const value = parseInt(parts[0], 10);
+    const unit = parts[1];
+
+    if (isNaN(value)) return 'N/A';
+
+    if (unit.startsWith('Week')) {
+      date.setDate(date.getDate() + value * 7);
+    } else if (unit.startsWith('Month')) {
+      date.setMonth(date.getMonth() + value);
+    } else if (unit.startsWith('Year')) {
+      date.setFullYear(date.getFullYear() + value);
+    } else {
+        return 'N/A';
+    }
+    return format(date, 'PPP');
+};
+
 
 export default function CreativeTemplate({ invoice, organization, invoiceColor }: TemplateProps) {
   const color = invoiceColor || '#0ea5e9'; // A vibrant blue
@@ -86,28 +111,40 @@ export default function CreativeTemplate({ invoice, organization, invoiceColor }
             </div>
         </div>
 
-        <table className="w-full text-left">
-          <thead>
-            <tr style={{ backgroundColor: color }} className="text-primary-foreground text-xs">
-              <th className="p-2 sm:p-3 font-bold uppercase tracking-wider w-12 text-center rounded-l-md">No.</th>
-              <th className="p-2 sm:p-3 font-bold uppercase tracking-wider">Product Description</th>
-              <th className="p-2 sm:p-3 font-bold uppercase tracking-wider text-right">Unit Price</th>
-              <th className="p-2 sm:p-3 font-bold uppercase tracking-wider text-center">Qty</th>
-              <th className="p-2 sm:p-3 font-bold uppercase tracking-wider text-right rounded-r-md">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.lineItems.map((item, index) => (
-              <tr key={item.id} className="border-b border-muted/50">
-                <td className="p-2 sm:p-3 text-center font-semibold text-muted-foreground">{String(index + 1).padStart(2, '0')}</td>
-                <td className="p-2 sm:p-3 font-semibold text-foreground">{item.description}</td>
-                <td className="p-2 sm:p-3 text-right text-muted-foreground">Rs.{item.price.toFixed(2)}</td>
-                <td className="p-2 sm:p-3 text-center text-muted-foreground">{item.quantity}</td>
-                <td className="p-2 sm:p-3 text-right font-semibold text-foreground">Rs.{(item.price * item.quantity).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-left">
+            <thead>
+                <tr style={{ backgroundColor: color }} className="text-primary-foreground text-xs">
+                <th className="p-2 sm:p-3 font-bold uppercase tracking-wider w-12 text-center rounded-l-md">No.</th>
+                <th className="p-2 sm:p-3 font-bold uppercase tracking-wider">Product Description</th>
+                <th className="p-2 sm:p-3 font-bold uppercase tracking-wider text-right">Unit Price</th>
+                <th className="p-2 sm:p-3 font-bold uppercase tracking-wider text-center">Qty</th>
+                <th className="p-2 sm:p-3 font-bold uppercase tracking-wider">Warranty</th>
+                <th className="p-2 sm:p-3 font-bold uppercase tracking-wider text-right rounded-r-md">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {invoice.lineItems.map((item, index) => {
+                    const warrantyEndDate = getWarrantyEndDate(invoice.createdAt, item.warrantyPeriod);
+                    return (
+                        <tr key={item.id} className="border-b border-muted/50">
+                            <td className="p-2 sm:p-3 text-center font-semibold text-muted-foreground">{String(index + 1).padStart(2, '0')}</td>
+                            <td className="p-2 sm:p-3 font-semibold text-foreground">{item.description}</td>
+                            <td className="p-2 sm:p-3 text-right text-muted-foreground">Rs.{item.price.toFixed(2)}</td>
+                            <td className="p-2 sm:p-3 text-center text-muted-foreground">{item.quantity}</td>
+                            <td className="p-2 sm:p-3 text-xs">
+                                <p className="font-medium">{item.warrantyPeriod}</p>
+                                {warrantyEndDate !== 'N/A' && (
+                                    <p className="text-muted-foreground">Ends: {warrantyEndDate}</p>
+                                )}
+                            </td>
+                            <td className="p-2 sm:p-3 text-right font-semibold text-foreground">Rs.{(item.price * item.quantity).toFixed(2)}</td>
+                        </tr>
+                    )
+                })}
+            </tbody>
+            </table>
+        </div>
       </main>
 
       <footer className="px-6 sm:px-8 mt-8 pb-8">

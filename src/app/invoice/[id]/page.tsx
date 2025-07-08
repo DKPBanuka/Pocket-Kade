@@ -188,7 +188,7 @@ export default function InvoiceDetailPage() {
                 </div>
             </div>
             
-            <div className="overflow-x-auto">
+            <div>
                 <TemplateToRender
                     invoice={invoice}
                     organization={organization}
