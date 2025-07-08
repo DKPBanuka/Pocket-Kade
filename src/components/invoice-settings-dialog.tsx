@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from 'next/link';
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { updateOrganizationInvoiceSettingsAction } from "@/app/actions";
@@ -19,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Eye } from "lucide-react";
+import { Loader2, Eye, Settings } from "lucide-react";
 import ClassicTemplate from "@/components/templates/classic";
 import ModernTemplate from "@/components/templates/modern";
 import CorporateTemplate from "@/components/templates/corporate";
@@ -145,11 +146,21 @@ export function InvoiceSettingsDialog({ children }: InvoiceSettingsDialogProps) 
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="sm:max-w-4xl p-0">
           <div className="flex flex-col max-h-[90vh]">
-            <DialogHeader className="p-6 pb-4 flex-shrink-0">
-                <DialogTitle>Customize Invoice</DialogTitle>
-                <DialogDescription>
-                Choose a template and brand color to match your business.
-                </DialogDescription>
+            <DialogHeader className="p-6 pb-4 flex-shrink-0 sm:flex sm:justify-between sm:items-center">
+                <div>
+                    <DialogTitle>Customize Invoice</DialogTitle>
+                    <DialogDescription>
+                    Choose a template and brand color. Add your company details in settings.
+                    </DialogDescription>
+                </div>
+                <div className="mt-4 sm:mt-0">
+                    <Link href="/settings?tab=organization" passHref>
+                        <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Edit Org Details
+                        </Button>
+                    </Link>
+                </div>
             </DialogHeader>
             <div className="flex-1 min-h-0 overflow-y-auto px-6">
                 <div className="py-4 space-y-6">

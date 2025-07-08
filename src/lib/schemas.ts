@@ -123,8 +123,6 @@ export const expenseServerSchema = z.object({
   date: z.string().min(1, { message: "Date is required." }),
   description: z.string().min(3, { message: "Description must be at least 3 characters." }),
   vendor: z.string().optional(),
-  receiptUrl: z.string().url().optional().or(z.literal('')),
-  receiptPath: z.string().optional(),
   createdBy: z.string(),
   createdByName: z.string(),
 });
@@ -168,4 +166,20 @@ export const organizationThemeSchema = z.object({
 export const organizationInvoiceSettingsSchema = z.object({
   invoiceTemplate: z.enum(['classic', 'modern', 'corporate', 'creative']).optional(),
   invoiceColor: z.string().optional(),
+});
+
+// Schemas for the new Shipment form
+export const shipmentLineItemSchema = z.object({
+  name: z.string().min(2, 'Item name is required'),
+  quantity: z.coerce.number().int().min(1, 'Quantity must be at least 1'),
+  unitCostPrice: z.coerce.number().min(0, 'Unit cost must be a positive number'),
+  landedCost: z.number().optional(),
+  suggestedPrice: z.number().optional(),
+});
+
+export const inventoryShipmentSchema = z.object({
+  lineItems: z.array(shipmentLineItemSchema).min(1, 'At least one item is required in a shipment'),
+  transportCost: z.coerce.number().min(0).optional().default(0),
+  otherExpenses: z.coerce.number().min(0).optional().default(0),
+  targetProfit: z.coerce.number().min(0).optional().default(0),
 });

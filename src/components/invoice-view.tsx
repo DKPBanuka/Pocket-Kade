@@ -1,4 +1,7 @@
 
+"use client";
+
+import { useState } from 'react';
 import type { Invoice, LineItem, Payment, Organization } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -11,13 +14,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
-import Logo from './logo';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Eye, Printer } from 'lucide-react';
+import { useLanguage } from '@/contexts/language-context';
 
 interface InvoiceViewProps {
   invoice: Invoice;
   organization: Organization | null;
+  TemplateToRender: React.ElementType;
 }
 
 const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string => {
@@ -44,7 +51,15 @@ const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string =
     return format(date, 'PPP');
 };
 
-export default function InvoiceView({ invoice, organization }: InvoiceViewProps) {
+export default function InvoiceView({ invoice, organization, TemplateToRender }: InvoiceViewProps) {
+  const { t } = useLanguage();
+  
+  const handlePrint = () => {
+    document.body.classList.add('printing-preview');
+    window.print();
+    document.body.classList.remove('printing-preview');
+  };
+  
   const subtotal = invoice.lineItems.reduce(
     (acc, item) => acc + item.quantity * item.price,
     0
@@ -65,25 +80,19 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
   const amountDue = total - amountPaid;
   
   return (
-    <Card className="print-invoice-card w-full rounded-xl shadow-lg">
+    <>
+    <Card className="w-full rounded-xl shadow-lg">
       <CardHeader className="p-4 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
-            <div className="no-print">
-              <Logo />
-            </div>
-            <div className="hidden print:block">
-               <h1 className="text-2xl font-bold font-headline text-foreground">
-                    {organization?.name || 'Your Company Name'}
-                </h1>
-                {organization?.address && <p className="text-sm text-muted-foreground whitespace-pre-line">{organization.address}</p>}
-                {organization?.phone && <p className="text-sm text-muted-foreground">{organization.phone}</p>}
-            </div>
+             <h1 className="text-2xl font-bold font-headline text-foreground">
+                {organization?.name || 'Your Company Name'}
+            </h1>
           </div>
           <div className="text-left sm:text-right flex-shrink-0">
             <h2 className="text-3xl font-bold font-headline text-primary">INVOICE</h2>
             <p className="text-muted-foreground mt-1">{invoice.id}</p>
-            <div className="mt-2">
+             <div className="mt-2">
                  <Badge className={cn(
                     "text-xs", 
                     invoice.status === 'Paid' && 'bg-accent text-accent-foreground',
@@ -111,18 +120,13 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
                     <p>{format(new Date(invoice.createdAt), 'PPP')}</p>
                 </div>
             </div>
-            <div className="text-left sm:text-right no-print">
-                <p className="text-muted-foreground font-semibold">From</p>
-                <p className="font-medium">{invoice.createdByName}</p>
-                {organization?.phone && <p>{organization.phone}</p>}
-            </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 md:p-8 pt-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border">
           <Table>
           <TableHeader>
-              <TableRow className="bg-muted/50">
+              <TableRow>
               <TableHead className="w-2/5 sm:w-auto">Description</TableHead>
               <TableHead className="text-center">Qty</TableHead>
               <TableHead className="text-right">Unit Price</TableHead>
@@ -176,15 +180,15 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
                     <span>-Rs.{amountPaid.toFixed(2)}</span>
                 </div>
                  <Separator/>
-                 <div className="flex justify-between font-bold text-base">
+                 <div className="flex justify-between font-bold text-lg">
                     <span>Amount Due</span>
-                    <span className="text-primary" style={organization?.invoiceColor ? { color: organization.invoiceColor } : {}}>Rs.{amountDue.toFixed(2)}</span>
+                    <span className="text-primary">Rs.{amountDue.toFixed(2)}</span>
                 </div>
             </div>
         </div>
         
         {invoice.payments && invoice.payments.length > 0 && (
-            <div className="mt-8 no-print">
+            <div className="mt-8">
                 <h3 className="font-semibold mb-2">Payment History</h3>
                 <div className="rounded-md border">
                 <Table>
@@ -210,11 +214,39 @@ export default function InvoiceView({ invoice, organization }: InvoiceViewProps)
         )}
 
       </CardContent>
-      <CardFooter className="p-4 sm:p-6 md:p-8 pt-0">
-        <div className="text-sm text-muted-foreground no-print">
-            <p>If you have any questions, please contact us at 0756438091.</p>
-        </div>
+       <CardFooter className="p-4 sm:p-6 md:p-8 pt-0 justify-end">
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="outline">
+                        <Eye className="mr-2 h-4 w-4"/> {t('invoice.view.preview')}
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0">
+                    <DialogHeader className="p-4 border-b">
+                         <DialogTitle>Invoice Preview</DialogTitle>
+                         <DialogDescription>
+                            This is how your invoice will look when printed.
+                         </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8">
+                        <div className="mx-auto my-auto">
+                            <TemplateToRender
+                                invoice={invoice}
+                                organization={organization}
+                                invoiceColor={organization?.invoiceColor}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between">
+                        <span className="text-xs text-muted-foreground print-hide">Tip: Use your browser's print options to save as PDF.</span>
+                        <Button onClick={handlePrint}>
+                            <Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
       </CardFooter>
     </Card>
+    </>
   );
 }

@@ -71,6 +71,21 @@ export interface InventoryItem {
   createdAt: string; // Storing as ISO string on client, but can be Timestamp from server
 }
 
+export interface ShipmentLineItem {
+  name: string;
+  quantity: number;
+  unitCostPrice: number;
+  landedCost?: number;
+  suggestedPrice?: number;
+}
+
+export interface ShipmentData {
+    lineItems: ShipmentLineItem[];
+    transportCost?: number;
+    otherExpenses?: number;
+    targetProfit?: number;
+}
+
 export interface LineItem {
   id: string;
   type: 'product' | 'service';
@@ -186,8 +201,6 @@ export interface Expense {
   date: string; // ISO String
   description: string;
   vendor?: string;
-  receiptUrl?: string;
-  receiptPath?: string;
   createdBy: string; // user uid
   createdByName: string;
   createdAt: string; // ISO String

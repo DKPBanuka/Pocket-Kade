@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Archive, Search, LineChart, Download } from 'lucide-react';
+import { Plus, Archive, Search, LineChart, Download, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/hooks/use-inventory';
 import InventoryList from '@/components/inventory-list';
@@ -140,12 +140,20 @@ export default function InventoryPage() {
                 </Link>
             )}
             {isPrivilegedUser && (
+                <>
                 <Link href="/inventory/new" passHref>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t('inventory.new_item')}
-                </Button>
+                    <Button variant="outline">
+                        <Plus className="mr-2 h-4 w-4" />
+                        New Item
+                    </Button>
                 </Link>
+                <Link href="/inventory/new-shipment" passHref>
+                    <Button>
+                        <Truck className="mr-2 h-4 w-4" />
+                        New Shipment
+                    </Button>
+                </Link>
+                </>
             )}
         </div>
       </div>

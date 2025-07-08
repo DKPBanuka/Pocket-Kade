@@ -3,12 +3,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import type { InventoryItem } from '@/lib/types';
+import type { InventoryItem, ShipmentData } from '@/lib/types';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, increment, writeBatch, query, where, getDocs, getDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
-import { inventoryItemServerSchema } from '@/lib/schemas';
+import { inventoryItemServerSchema, inventoryShipmentSchema } from '@/lib/schemas';
 import * as z from 'zod';
+import { useRouter } from 'next/navigation';
 
 const INVENTORY_COLLECTION = 'inventory';
 const USERS_COLLECTION = 'users';
@@ -21,6 +22,7 @@ export function useInventory() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!user?.activeTenantId) {
@@ -76,6 +78,107 @@ export function useInventory() {
 
     return () => unsubscribe();
   }, [toast, user]);
+  
+  const addInventoryShipment = useCallback(async (shipmentData: ShipmentData) => {
+    if (user?.activeRole === 'staff') {
+        toast({ title: "Permission Denied", description: "You do not have permission to add shipments.", variant: "destructive" });
+        return;
+    }
+    if (!user?.activeTenantId || !user.username) {
+        toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+        return;
+    }
+
+    const validationResult = inventoryShipmentSchema.safeParse(shipmentData);
+    if (!validationResult.success) {
+        const errorMessage = validationResult.error.errors.map(e => e.message).join('\n');
+        toast({ title: "Invalid Shipment Data", description: errorMessage, variant: "destructive" });
+        return;
+    }
+    
+    const { lineItems, transportCost = 0, otherExpenses = 0, targetProfit = 0 } = validationResult.data;
+
+    try {
+        const batch = writeBatch(db);
+        const totalAdditionalExpenses = transportCost + otherExpenses;
+        const totalPurchaseValue = lineItems.reduce((acc, item) => acc + item.quantity * item.unitCostPrice, 0);
+        const totalLandedCost = totalPurchaseValue + totalAdditionalExpenses;
+        const totalRequiredRevenue = totalLandedCost + targetProfit;
+
+        for (const item of lineItems) {
+            const itemTotalValue = item.quantity * item.unitCostPrice;
+            const landedCost = totalPurchaseValue > 0 ? item.unitCostPrice + ((itemTotalValue / totalPurchaseValue) * totalAdditionalExpenses) / item.quantity : item.unitCostPrice;
+            
+            let suggestedPrice = landedCost;
+            if (targetProfit > 0 && totalLandedCost > 0) {
+                const profitMarginRatio = totalRequiredRevenue / totalLandedCost;
+                const rawSuggestedPrice = landedCost * profitMarginRatio;
+                suggestedPrice = Math.round(rawSuggestedPrice / 10) * 10;
+            }
+
+            const q = query(
+                collection(db, INVENTORY_COLLECTION),
+                where("tenantId", "==", user.activeTenantId),
+                where("name", "==", item.name)
+            );
+            const existingItemsSnapshot = await getDocs(q);
+            
+            let docRef;
+            if (!existingItemsSnapshot.empty) {
+                // Item exists, update it
+                docRef = existingItemsSnapshot.docs[0].ref;
+                const existingItem = existingItemsSnapshot.docs[0].data() as InventoryItem;
+                
+                const oldTotalCost = existingItem.costPrice * existingItem.quantity;
+                const newTotalCost = landedCost * item.quantity;
+                const newTotalQuantity = existingItem.quantity + item.quantity;
+                const newWeightedAvgCost = (oldTotalCost + newTotalCost) / newTotalQuantity;
+
+                batch.update(docRef, {
+                    quantity: increment(item.quantity),
+                    costPrice: newWeightedAvgCost
+                });
+            } else {
+                // Item does not exist, create it
+                docRef = doc(collection(db, INVENTORY_COLLECTION));
+                batch.set(docRef, {
+                    tenantId: user.activeTenantId,
+                    name: item.name,
+                    quantity: item.quantity,
+                    costPrice: landedCost,
+                    price: suggestedPrice, // Correctly set selling price to suggested price
+                    category: 'Uncategorized',
+                    reorderPoint: 10,
+                    status: 'Available',
+                    warrantyPeriod: 'N/A',
+                    brand: '',
+                    createdAt: serverTimestamp(),
+                });
+            }
+            
+            // Add stock movement record
+            const movementRef = doc(collection(db, STOCK_MOVEMENTS_COLLECTION));
+            batch.set(movementRef, {
+                inventoryItemId: docRef.id,
+                tenantId: user.activeTenantId,
+                type: 'addition',
+                quantity: item.quantity,
+                referenceId: 'Shipment',
+                createdAt: serverTimestamp(),
+                createdByName: user.username,
+            });
+        }
+        
+        await batch.commit();
+        toast({ title: "Shipment Added", description: "Inventory has been successfully updated." });
+        router.push('/inventory');
+
+    } catch (error) {
+        console.error("Error adding shipment:", error);
+        toast({ title: "Error", description: "Failed to add shipment.", variant: "destructive" });
+    }
+}, [toast, user, router]);
+
 
   const addInventoryItem = useCallback(async (itemData: Omit<InventoryItem, 'id' | 'createdAt' | 'tenantId'>) => {
     if (user?.activeRole === 'staff') {
@@ -287,5 +390,5 @@ export function useInventory() {
   }, [inventory, toast, user]);
   
 
-  return { inventory, isLoading, addInventoryItem, getInventoryItem, updateInventoryItem, deleteInventoryItem };
+  return { inventory, isLoading, addInventoryItem, getInventoryItem, updateInventoryItem, deleteInventoryItem, addInventoryShipment };
 }

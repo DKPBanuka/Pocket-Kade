@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import type { Invoice, Organization } from '@/lib/types';
 
 import { useInvoices } from '@/hooks/use-invoices';
 import ClassicTemplate from '@/components/templates/classic';
@@ -11,8 +11,8 @@ import ModernTemplate from '@/components/templates/modern';
 import CorporateTemplate from '@/components/templates/corporate';
 import CreativeTemplate from '@/components/templates/creative';
 import { Button } from '@/components/ui/button';
-import { Printer, Edit, ArrowLeft, Loader2, FileX2, HandCoins, MoreHorizontal, Eye } from 'lucide-react';
-import type { Invoice } from '@/lib/types';
+import { Loader2, ArrowLeft, Edit, MoreHorizontal, FileX2, Printer, Eye, CreditCard } from 'lucide-react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,10 +27,12 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +43,6 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { AddPaymentDialog } from '@/components/add-payment-dialog';
 import { useLanguage } from '@/contexts/language-context';
-import InvoiceView from '@/components/invoice-view';
 
 export default function InvoiceDetailPage() {
   const router = useRouter();
@@ -50,7 +51,6 @@ export default function InvoiceDetailPage() {
   const { user, organization, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const [invoice, setInvoice] = useState<Invoice | undefined>(undefined);
-  const [isPreview, setIsPreview] = useState(false);
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const isLoading = invoicesLoading || authLoading;
@@ -66,11 +66,6 @@ export default function InvoiceDetailPage() {
     }
   }, [id, getInvoice, isLoading, router]);
   
-  const handlePrint = () => {
-    window.print();
-  };
-
-
   const getTemplateComponent = () => {
     switch (organization?.invoiceTemplate) {
         case 'modern':
@@ -83,6 +78,14 @@ export default function InvoiceDetailPage() {
         default:
             return ClassicTemplate;
     }
+  };
+  
+  const handlePrint = () => {
+    document.body.classList.add('printing-preview');
+    requestAnimationFrame(() => {
+      window.print();
+      document.body.classList.remove('printing-preview');
+    });
   };
 
   if (isLoading || !invoice) {
@@ -98,30 +101,21 @@ export default function InvoiceDetailPage() {
   const isPrivilegedUser = user?.activeRole === 'admin' || user?.activeRole === 'owner';
 
   return (
-    <div className="bg-muted/30 min-h-screen print-page-container">
-        <div className="container max-w-4xl py-6 sm:py-10">
-            <div className="mb-6 flex items-center justify-between gap-4 no-print">
+    <div className="bg-muted/30 min-h-screen">
+        <div className="container max-w-4xl py-6 sm:py-10 pb-24 md:pb-10">
+            <div className="mb-6 flex items-center justify-between gap-4">
                 <Button variant="outline" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t('general.back')}
                 </Button>
-                <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-2">
                     {isActionable && (
                         <AddPaymentDialog invoice={invoice} addPaymentToInvoice={addPaymentToInvoice}>
-                            <Button size="sm" className="hidden sm:inline-flex">
-                                <HandCoins className="mr-2 h-4 w-4" />
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
                                 {t('invoice.view.add_payment')}
                             </Button>
                         </AddPaymentDialog>
                     )}
-                    <Button onClick={handlePrint} variant="outline" size="sm" className="hidden sm:inline-flex">
-                        <Printer className="mr-2 h-4 w-4" />
-                        {t('invoice.view.print')}
-                    </Button>
-                    <Button onClick={() => setIsPreview(true)} variant="outline" size="sm" className="hidden sm:inline-flex">
-                        <Eye className="mr-2 h-4 w-4" />
-                        {t('invoice.view.preview')}
-                    </Button>
                     
                     {isPrivilegedUser && invoice.status !== 'Cancelled' && (
                         <DropdownMenu>
@@ -135,14 +129,6 @@ export default function InvoiceDetailPage() {
                                 <DropdownMenuItem onSelect={() => router.push(`/invoice/${id}/edit`)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     <span>{t('invoice.view.edit')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setIsPreview(true)} className="sm:hidden">
-                                     <Eye className="mr-2 h-4 w-4" />
-                                     <span>{t('invoice.view.preview')}</span>
-                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={handlePrint} className="sm:hidden">
-                                    <Printer className="mr-2 h-4 w-4" />
-                                    <span>{t('invoice.view.print')}</span>
                                 </DropdownMenuItem>
                                 <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -169,36 +155,111 @@ export default function InvoiceDetailPage() {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
+                     <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="outline">
+                                <Eye className="mr-2 h-4 w-4"/> {t('invoice.view.preview')}
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 print-dialog-content">
+                            <DialogHeader className="p-4 border-b print-hide-in-dialog">
+                                <DialogTitle>Invoice Preview</DialogTitle>
+                                <DialogDescription>
+                                    This is how your invoice will look when printed.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
+                                <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
+                                    <TemplateToRender
+                                        invoice={invoice}
+                                        organization={organization}
+                                        invoiceColor={organization?.invoiceColor}
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between print-hide-in-dialog">
+                                <span className="text-xs text-muted-foreground">Tip: Use your browser's print options to save as PDF.</span>
+                                <Button onClick={handlePrint}>
+                                    <Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
             
-            <div className="print-main-view">
-              <InvoiceView invoice={invoice} organization={organization} />
+            <div className="overflow-x-auto">
+                <TemplateToRender
+                    invoice={invoice}
+                    organization={organization}
+                    invoiceColor={organization?.invoiceColor}
+                />
             </div>
         </div>
 
-        {/* Preview Dialog */}
-        <Dialog open={isPreview} onOpenChange={setIsPreview}>
-            <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 no-print">
-                <DialogHeader className="sr-only">
-                    <DialogTitle>Invoice Preview</DialogTitle>
-                </DialogHeader>
-                <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8">
-                    <div className="mx-auto my-auto w-[800px] bg-white shadow-lg">
-                        <TemplateToRender
-                            invoice={invoice}
-                            organization={organization}
-                            invoiceColor={organization?.invoiceColor}
-                        />
-                    </div>
-                </div>
-                <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-center">
-                    <Button type="button" variant="outline" onClick={() => setIsPreview(false)}>
-                        {t('invoice.view.close_preview')}
+        {/* Mobile Action Bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-2 flex items-center justify-around gap-1">
+             {isActionable && (
+                <AddPaymentDialog invoice={invoice} addPaymentToInvoice={addPaymentToInvoice}>
+                    <Button variant="ghost" className="flex-1 flex-col h-auto p-1 text-green-600 hover:text-green-600">
+                        <CreditCard className="h-5 w-5 mb-1" />
+                        <span className="text-xs font-semibold">{t('invoice.view.add_payment')}</span>
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </AddPaymentDialog>
+            )}
+
+            {isPrivilegedUser && invoice.status !== 'Cancelled' && (
+                <Button variant="ghost" className="flex-1 flex-col h-auto p-1" onClick={() => router.push(`/invoice/${id}/edit`)}>
+                    <Edit className="h-5 w-5 mb-1" />
+                    <span className="text-xs">{t('invoice.view.edit')}</span>
+                </Button>
+            )}
+            
+            <Dialog>
+                <DialogTrigger asChild>
+                     <Button variant="ghost" className="flex-1 flex-col h-auto p-1">
+                        <Printer className="h-5 w-5 mb-1" />
+                        <span className="text-xs">{t('invoice.view.print')}</span>
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 print-dialog-content">
+                    <DialogHeader className="p-4 border-b print-hide-in-dialog">
+                        <DialogTitle>Invoice Preview</DialogTitle>
+                        <DialogDescription>This is how your invoice will look when printed.</DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
+                        <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
+                            <TemplateToRender invoice={invoice} organization={organization} invoiceColor={organization?.invoiceColor} />
+                        </div>
+                    </div>
+                    <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between print-hide-in-dialog">
+                        <span className="text-xs text-muted-foreground">Tip: Use your browser's print options to save as PDF.</span>
+                        <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {isPrivilegedUser && invoice.status !== 'Cancelled' && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="ghost" className="flex-1 flex-col h-auto p-1 text-destructive hover:text-destructive">
+                            <FileX2 className="h-5 w-5 mb-1" />
+                            <span className="text-xs">{t('invoice.view.cancel')}</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>{t('invoice.view.cancel_confirm_title')}</AlertDialogTitle>
+                            <AlertDialogDescription>{t('invoice.view.cancel_confirm_desc', { invoiceId: invoice.id })}</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => cancelInvoice(invoice.id)} className="bg-destructive hover:bg-destructive/90">{t('invoice.view.confirm_cancellation')}</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </div>
     </div>
   );
 }

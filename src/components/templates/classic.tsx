@@ -13,7 +13,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
-import Logo from '../logo';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -70,7 +69,7 @@ export default function ClassicTemplate({ invoice, organization, invoiceColor }:
   const colorStyle = invoiceColor ? { color: invoiceColor } : {};
   
   return (
-    <Card className="print-container w-full rounded-xl shadow-lg">
+    <Card className="w-full rounded-xl shadow-lg bg-card text-card-foreground">
       <CardHeader className="p-4 sm:p-6 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
           <div>
@@ -97,24 +96,22 @@ export default function ClassicTemplate({ invoice, organization, invoiceColor }:
           </div>
         </div>
         <Separator className="my-4 sm:my-6" />
-        <div className="grid grid-cols-1 text-sm">
-            <div className="flex flex-col gap-4">
-                <div>
-                    <p className="text-muted-foreground font-semibold">Billed To</p>
-                    <p className="font-medium text-lg">{invoice.customerName}</p>
-                    {invoice.customerPhone && (
-                        <a href={`tel:${invoice.customerPhone}`} className="text-muted-foreground hover:underline hover:text-primary">{invoice.customerPhone}</a>
-                    )}
-                </div>
-                 <div>
-                    <p className="text-muted-foreground font-semibold">Invoice Date</p>
-                    <p>{format(new Date(invoice.createdAt), 'PPP')}</p>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 text-sm gap-4">
+            <div>
+                <p className="text-muted-foreground font-semibold">Billed To</p>
+                <p className="font-medium text-lg">{invoice.customerName}</p>
+                {invoice.customerPhone && (
+                    <a href={`tel:${invoice.customerPhone}`} className="text-muted-foreground hover:underline hover:text-primary">{invoice.customerPhone}</a>
+                )}
+            </div>
+            <div className='sm:text-right'>
+                <p className="text-muted-foreground font-semibold">Invoice Date</p>
+                <p>{format(new Date(invoice.createdAt), 'PPP')}</p>
             </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 md:p-8 pt-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-lg border">
           <Table>
           <TableHeader>
               <TableRow className="bg-muted/50">
@@ -202,7 +199,7 @@ export default function ClassicTemplate({ invoice, organization, invoiceColor }:
         </div>
         
         {invoice.status !== 'Paid' && invoice.payments && invoice.payments.length > 0 && (
-            <div className="mt-8 no-print">
+            <div className="mt-8 print-hide">
                 <h3 className="font-semibold mb-2">Payment History</h3>
                 <div className="rounded-md border">
                 <Table>
@@ -231,12 +228,13 @@ export default function ClassicTemplate({ invoice, organization, invoiceColor }:
       <CardFooter className="p-4 sm:p-6 md:p-8 pt-0 flex-col items-start gap-4">
         {organization?.invoiceSignature && (
             <div className="pt-12 text-sm">
-                <div className="border-t-2 border-gray-400 w-48"></div>
+                <div className="border-t-2 border-border w-48"></div>
                 <p className="mt-2 font-semibold">{organization.invoiceSignature}</p>
+                 <p className="text-xs text-muted-foreground print-hide">Created by: {invoice.createdByName}</p>
             </div>
         )}
         <div className="text-sm text-muted-foreground">
-            <p>{organization?.invoiceThankYouMessage || 'Thank you for your business!'}</p>
+            <p className="print-hide">{organization?.invoiceThankYouMessage || 'Thank you for your business!'}</p>
             {organization?.email && <p>Contact us at: {organization.email}</p>}
         </div>
       </CardFooter>

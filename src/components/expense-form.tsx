@@ -5,10 +5,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Calendar as CalendarIcon, Upload, X } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -27,7 +26,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useLanguage } from '@/contexts/language-context';
-import Image from 'next/image';
 
 const expenseCategories: ExpenseCategory[] = ['Rent', 'Salaries', 'Utilities', 'Marketing', 'Purchases', 'Other'];
 
@@ -51,10 +49,6 @@ export default function ExpenseForm({ expense, onFinished }: ExpenseFormProps) {
   const router = useRouter();
   const isEditMode = !!expense;
   const { t } = useLanguage();
-  
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(expense?.receiptUrl || null);
-
 
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(formSchema),
@@ -74,31 +68,13 @@ export default function ExpenseForm({ expense, onFinished }: ExpenseFormProps) {
             vendor: '',
         },
   });
-  
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setReceiptFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setReceiptPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-  
-  const removeReceipt = () => {
-      setReceiptFile(null);
-      setReceiptPreview(null);
-      // In edit mode, we'll handle removing the URL on submission
-  }
 
   async function onSubmit(values: ExpenseFormData) {
     const dataForDb = { ...values, date: values.date.toISOString() };
     if (isEditMode && expense) {
-        await updateExpense(expense.id, dataForDb, receiptFile || undefined);
+        await updateExpense(expense.id, dataForDb);
     } else {
-        await addExpense(dataForDb, receiptFile || undefined);
+        await addExpense(dataForDb);
     }
     
     if (onFinished) {
@@ -222,35 +198,6 @@ export default function ExpenseForm({ expense, onFinished }: ExpenseFormProps) {
                     )}
                 />
             </div>
-            
-            <div>
-                 <FormLabel>{t('expenses.form.receipt')}</FormLabel>
-                 <div className="mt-2 flex justify-center rounded-lg border border-dashed border-input px-6 py-10">
-                    <div className="text-center">
-                        {receiptPreview ? (
-                            <div className="relative group">
-                                <Image src={receiptPreview} alt="Receipt preview" width={200} height={200} className="mx-auto h-32 w-auto object-contain rounded-md" />
-                                <Button type="button" variant="destructive" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100" onClick={removeReceipt}>
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ) : (
-                            <>
-                                <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <div className="mt-4 flex text-sm leading-6 text-muted-foreground">
-                                    <label htmlFor="file-upload" className="relative cursor-pointer rounded-md bg-transparent font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 hover:text-primary/80">
-                                    <span>{t('expenses.form.upload_file')}</span>
-                                    <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/*" />
-                                    </label>
-                                    <p className="pl-1">{t('expenses.form.drag_drop')}</p>
-                                </div>
-                                <p className="text-xs leading-5 text-muted-foreground/80">PNG, JPG, GIF up to 10MB</p>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-
           </CardContent>
         </Card>
 

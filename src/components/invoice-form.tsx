@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Trash2, Loader2, ChevronsUpDown, Package, Wrench } from 'lucide-react';
@@ -34,7 +34,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Badge } from './ui/badge';
 import CustomerSelector from './customer-selector';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Label } from './ui/label';
 import { suggestLineItemAction } from '@/app/actions';
 import { useLanguage } from '@/contexts/language-context';
 
@@ -271,10 +271,10 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
     return availableItems.filter(i => i.category === categoryFilter);
   }, [inventory, categoryFilter]);
 
-  const watchLineItems = form.watch('lineItems');
-  const watchDiscountType = form.watch('discountType');
-  const watchDiscountValue = form.watch('discountValue');
-  const watchStatus = form.watch('status');
+  const watchLineItems = useWatch({ control: form.control, name: 'lineItems' });
+  const watchDiscountType = useWatch({ control: form.control, name: 'discountType' });
+  const watchDiscountValue = useWatch({ control: form.control, name: 'discountValue' });
+  const watchStatus = useWatch({ control: form.control, name: 'status' });
   
   const { subtotal, discountAmount, totalAmount } = useMemo(() => {
     const sub = watchLineItems.reduce(
@@ -302,11 +302,32 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
     }
   }
 
+  const onInvalid = (errors: FieldErrors<InvoiceFormData>) => {
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length > 0) {
+        let elementToScrollTo: HTMLElement | null = null;
+        const firstErrorKey = errorKeys[0];
+
+        if (firstErrorKey === 'customerName' || firstErrorKey === 'customerId') {
+            elementToScrollTo = document.querySelector('[role="combobox"]');
+        } else if (firstErrorKey === 'lineItems' && errors.lineItems) {
+            const firstErrorIndex = Object.keys(errors.lineItems)[0];
+            if (firstErrorIndex) {
+               elementToScrollTo = document.querySelector(`[data-line-item-index="${firstErrorIndex}"]`);
+            }
+        }
+        
+        if (elementToScrollTo) {
+            elementToScrollTo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+  };
+
   const isPrivilegedUser = user?.activeRole === 'admin' || user?.activeRole === 'owner';
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>{t('invoice.form.customer_info')}</CardTitle>
@@ -339,6 +360,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                 return (
                 <div
                   key={field.id}
+                  data-line-item-index={index}
                   className="grid grid-cols-1 gap-y-4 rounded-md border p-4 md:grid-cols-12 md:gap-x-4 md:items-end"
                 >
                   <div className="md:col-span-12">
