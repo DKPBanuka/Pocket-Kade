@@ -359,7 +359,7 @@ export default function DashboardPage() {
           {t('dashboard.title')}
         </h1>
         <p className="text-muted-foreground mb-2">
-          {t('dashboard.welcome', { username: user?.username })}
+          {t('dashboard.welcome', { username: user?.username ?? '' })}
         </p>
       </div>
 
