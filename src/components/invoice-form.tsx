@@ -258,6 +258,61 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
     name: 'lineItems',
   });
 
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState<boolean[]>([]);
+
+  const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
+    let timeoutId: NodeJS.Timeout | null;
+    return (...args: Parameters<F>) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(() => {
+        func(...args);
+      }, delay);
+    };
+  };
+  
+  const handleSuggestion = useCallback(
+    async (text: string, index: number) => {
+      if (text.length < 3) {
+        setSuggestions((prev) => {
+          const newSuggestions = [...prev];
+          newSuggestions[index] = '';
+          return newSuggestions;
+        });
+        return;
+      }
+      setLoadingSuggestions((prev) => {
+        const newLoading = [...prev];
+        newLoading[index] = true;
+        return newLoading;
+      });
+      try {
+        const result = await suggestLineItemAction({ partialDescription: text });
+        setSuggestions((prev) => {
+          const newSuggestions = [...prev];
+          newSuggestions[index] = result.suggestion;
+          return newSuggestions;
+        });
+      } catch (e) {
+        console.error('Suggestion error:', e);
+      } finally {
+        setLoadingSuggestions((prev) => {
+          const newLoading = [...prev];
+          newLoading[index] = false;
+          return newLoading;
+        });
+      }
+    },
+    []
+  );
+
+  const debouncedHandleSuggestion = useMemo(
+    () => debounce(handleSuggestion, 500),
+    [handleSuggestion]
+  );
+
   const uniqueCategories = useMemo(() => {
     const categories = new Set(inventory.map(item => item.category).filter(Boolean));
     return ['All', ...Array.from(categories).sort()];
@@ -403,22 +458,51 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                   </div>
                   
                   <div className="col-span-12 md:col-span-4">
-                      <FormLabel>{t('invoice.form.description')}</FormLabel>
-                       {lineItemType === 'product' ? (
-                        <ProductSelector form={form} index={index} availableInventory={availableInventory} />
-                      ) : (
-                        <FormField
-                          control={form.control}
-                          name={`lineItems.${index}.description`}
-                          render={({ field }) => (
-                            <FormControl>
-                              <Input placeholder={t('invoice.form.service_placeholder')} {...field} />
-                            </FormControl>
-                          )}
-                        />
-                      )}
-                      <FormMessage className="mt-1">{form.formState.errors.lineItems?.[index]?.description?.message}</FormMessage>
-                  </div>
+                        <FormLabel>{t('invoice.form.description')}</FormLabel>
+                        {lineItemType === 'product' ? (
+                            <ProductSelector form={form} index={index} availableInventory={availableInventory} />
+                        ) : (
+                            <div className="relative">
+                                <FormField
+                                    control={form.control}
+                                    name={`lineItems.${index}.description`}
+                                    render={({ field }) => (
+                                        <FormControl>
+                                            <Input
+                                                placeholder={t('invoice.form.service_placeholder')}
+                                                {...field}
+                                                onChange={(e) => {
+                                                    field.onChange(e);
+                                                    debouncedHandleSuggestion(e.target.value, index);
+                                                }}
+                                                autoComplete="off"
+                                            />
+                                        </FormControl>
+                                    )}
+                                />
+                                {loadingSuggestions[index] && <Loader2 className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
+                            </div>
+                        )}
+                        {suggestions[index] && !loadingSuggestions[index] && lineItemType === 'service' && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-2 text-xs h-auto py-1 px-2"
+                                onClick={() => {
+                                    form.setValue(`lineItems.${index}.description`, suggestions[index], { shouldValidate: true });
+                                    setSuggestions(prev => {
+                                        const newSuggestions = [...prev];
+                                        newSuggestions[index] = '';
+                                        return newSuggestions;
+                                    });
+                                }}
+                            >
+                                Suggest: <span className="font-semibold ml-1">{suggestions[index]}</span>
+                            </Button>
+                        )}
+                        <FormMessage className="mt-1">{form.formState.errors.lineItems?.[index]?.description?.message}</FormMessage>
+                    </div>
 
                   <div className="col-span-6 md:col-span-2">
                         <FormLabel>{t('invoice.form.qty')}</FormLabel>
