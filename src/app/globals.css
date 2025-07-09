@@ -102,14 +102,18 @@
     visibility: hidden;
   }
 
-  /* Make the invoice container and everything inside it visible */
-  body.printing-preview .print-this-invoice,
-  body.printing-preview .print-this-invoice * {
+  /* 
+    Make the invoice container of the OPEN dialog visible.
+    The [data-state=open] attribute is added by Radix UI Dialog.
+    This prevents both mobile and desktop dialogs from printing at once.
+  */
+  body.printing-preview [data-state=open] .print-this-invoice,
+  body.printing-preview [data-state=open] .print-this-invoice * {
     visibility: visible;
   }
 
   /* Position the invoice container to fill the entire page */
-  body.printing-preview .print-this-invoice {
+  body.printing-preview [data-state=open] .print-this-invoice {
     position: absolute;
     left: 0;
     top: 0;
@@ -120,11 +124,10 @@
     padding: 0;
     border: none;
     box-shadow: none !important;
-    transform: scale(1); /* Ensure no scaling issues */
   }
   
-  /* Hide any element specifically marked not for printing */
-  .print-hide {
+  /* Hide any element specifically marked not for printing (like dialog headers/footers) */
+  .print-hide, .print-hide-in-dialog {
     display: none !important;
   }
 }

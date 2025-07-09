@@ -39,30 +39,48 @@ const calculatePaid = (invoice: Pick<Invoice, 'payments'>): number => {
 // --- Chart Components (copied from reports page for consistency) ---
 
 function DashboardSalesChart({ invoices }: { invoices: Invoice[] }) {
+    const { t } = useLanguage();
+    
     const salesData = useMemo(() => {
         const today = new Date();
-        const last30Days = eachDayOfInterval({ start: subDays(today, 29), end: today });
+        const last30DaysInterval = { start: subDays(today, 29), end: today };
+        const salesByDay: Record<string, number> = {};
 
-        const salesByDay = invoices
-            .filter(i => i.status !== 'Cancelled')
-            .reduce((acc, invoice) => {
-                const date = format(new Date(invoice.createdAt), 'yyyy-MM-dd');
-                const total = calculateTotal(invoice);
-                acc[date] = (acc[date] || 0) + total;
-                return acc;
-            }, {} as Record<string, number>);
-
-        return last30Days.map(date => {
-            const formattedDate = format(date, 'yyyy-MM-dd');
-            return {
-                date: format(date, 'MMM d'),
-                sales: salesByDay[formattedDate] || 0,
-            };
+        // Initialize all days in the last 30 days with 0 sales
+        eachDayOfInterval(last30DaysInterval).forEach(day => {
+            const formattedDate = format(day, 'yyyy-MM-dd');
+            salesByDay[formattedDate] = 0;
         });
+        
+        // Accumulate sales from payments
+        invoices.forEach(invoice => {
+            if (invoice.status === 'Cancelled' || !invoice.payments) return;
+            
+            invoice.payments.forEach(payment => {
+                try {
+                    const paymentDate = new Date(payment.date);
+                    // Check if payment date is valid and within the last 30 days
+                    if (!isNaN(paymentDate.getTime()) && paymentDate >= last30DaysInterval.start && paymentDate <= last30DaysInterval.end) {
+                        const dateKey = format(paymentDate, 'yyyy-MM-dd');
+                        if (salesByDay.hasOwnProperty(dateKey)) {
+                           salesByDay[dateKey] += payment.amount;
+                        }
+                    }
+                } catch(e) {
+                    console.error("Invalid payment date found for chart:", payment);
+                }
+            });
+        });
+
+        // Format for the chart, ensuring we use the initialized days to maintain order
+        return Object.entries(salesByDay).map(([date, sales]) => ({
+            date: format(new Date(date), 'MMM d'),
+            sales,
+        }));
     }, [invoices]);
     
     const chartConfig = {
-        sales: { label: "Sales", color: "hsl(var(--primary))" },
+        sales: { label: t('analysis.pl.revenue'), color: "hsl(var(--primary))" },
     };
 
     return (
@@ -70,7 +88,7 @@ function DashboardSalesChart({ invoices }: { invoices: Invoice[] }) {
             <LineChart data={salesData} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `Rs.${value / 1000}k`} />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => `Rs.${Number(value) / 1000}k`} />
                 <Tooltip content={<ChartTooltipContent indicator="dot" formatter={(value) => formatCurrency(value as number)} />} />
                 <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} dot={false} />
             </LineChart>
@@ -359,7 +377,7 @@ export default function DashboardPage() {
           {t('dashboard.title')}
         </h1>
         <p className="text-muted-foreground mb-2">
-          {t('dashboard.welcome', { username: user?.username ?? '' })}
+          {t('dashboard.welcome', { username: user?.username })}
         </p>
       </div>
 

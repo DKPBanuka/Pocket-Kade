@@ -188,7 +188,7 @@ export default function InvoiceDetailPage() {
                 </div>
             </div>
             
-            <div>
+            <div className="print-hide">
                 <TemplateToRender
                     invoice={invoice}
                     organization={organization}
