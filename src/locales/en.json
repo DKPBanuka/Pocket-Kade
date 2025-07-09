@@ -347,6 +347,7 @@
   "analysis.expense.no_data_desc": "Add some expenses to see an analysis here.",
   "analysis.expense.total_expenses": "Total Expenses",
   "users.title": "User Management",
+  "users.add_user": "Add New User",
   "users.desc": "Invite and manage user accounts for your team.",
   "users.invite.title": "Invite New Team Member",
   "users.invite.desc": "Enter the email and role for the new member. An invitation link will be generated.",
