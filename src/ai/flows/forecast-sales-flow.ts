@@ -13,18 +13,19 @@ import {z} from 'genkit';
 
 const SalesDataItemSchema = z.object({
   date: z.string().describe('The date of the sales data point (e.g., YYYY-MM-DD).'),
-  total: z.number().describe('The total sales amount for that day.'),
+  total: z.number().describe('The total sales revenue received on that day.'),
 });
 
 const SalesDataInputSchema = z.object({
-  salesData: z.array(SalesDataItemSchema).describe('An array of historical sales data.'),
+  salesData: z.array(SalesDataItemSchema).describe('An array of historical daily revenue data based on payments received.'),
+  locale: z.enum(['en', 'si']).describe('The language for the forecast response.'),
 });
 export type SalesDataInput = z.infer<typeof SalesDataInputSchema>;
 
 const SalesForecastOutputSchema = z.object({
   forecast: z
     .string()
-    .describe('A comprehensive, easy-to-read sales forecast and analysis based on the provided data. It should include trends, patterns, and a prediction for the next 30 days. The tone should be like a helpful business advisor.'),
+    .describe('A comprehensive, easy-to-read sales forecast and analysis based on the provided daily revenue data. It should identify trends, patterns, and provide a realistic potential revenue range for the next 30 days. The tone should be like a helpful business advisor.'),
 });
 export type SalesForecastOutput = z.infer<typeof SalesForecastOutputSchema>;
 
@@ -35,17 +36,21 @@ export async function forecastSales(input: SalesDataInput): Promise<SalesForecas
 
 const prompt = ai.definePrompt({
   name: 'salesForecastPrompt',
-  input: {schema: SalesDataInputSchema},
+  input: {schema: z.object({
+      salesData: z.array(SalesDataItemSchema),
+      isSinhala: z.boolean(),
+  })},
   output: {schema: SalesForecastOutputSchema},
-  prompt: `You are a business analytics expert. Your task is to analyze the following daily sales data and provide a sales forecast for the next 30 days.
+  prompt: `You are a business analytics expert. Your task is to analyze the following daily revenue data (based on actual payments received) and provide a sales forecast for the next 30 days.
+The response must be in {{#if isSinhala}}Sinhala{{else}}English{{/if}}.
 
-Please provide a detailed analysis. Look for trends (upward, downward, stable), seasonality, or any other patterns.
-Based on your analysis, generate a clear, concise, and insightful forecast. Mention potential revenue for the next month.
+Provide a detailed analysis. Look for trends (upward, downward, stable), weekly patterns (e.g., higher sales on weekends), or any other notable observations.
+Based on your analysis, generate a clear, concise, and insightful forecast. Mention a potential revenue range (e.g., Rs. 100,000 - Rs. 120,000) for the next month.
 The forecast should be written in a friendly, advisory tone.
 
-Historical Sales Data:
+Historical Daily Revenue Data:
 {{#each salesData}}
-- Date: {{{date}}}, Sales: {{{total}}}
+- Date: {{{date}}}, Revenue: {{{total}}}
 {{/each}}
 `,
 });
@@ -62,8 +67,9 @@ const forecastSalesFlow = ai.defineFlow(
     if (input.salesData.length < 7) {
         return { forecast: "There is not enough historical data to generate a meaningful forecast. Please accumulate at least 7 days of sales." };
     }
-
-    const {output} = await prompt(input);
+    
+    const isSinhala = input.locale === 'si';
+    const {output} = await prompt({ salesData: input.salesData, isSinhala });
     return output!;
   }
 );

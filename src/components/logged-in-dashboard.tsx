@@ -132,34 +132,37 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
     const [forecast, setForecast] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { t } = useLanguage();
+    const { t, locale } = useLanguage();
 
     const salesDataForForecast = useMemo(() => {
-        const salesByDay: { [key: string]: number } = {};
+        const dailyRevenue: { [key: string]: number } = {};
         const endDate = new Date();
         const startDate = subDays(endDate, 90);
 
         invoices.forEach(invoice => {
-            if (invoice.status === 'Cancelled') return;
+            if (invoice.status === 'Cancelled' || !invoice.payments) return;
             
-            const invoiceDate = new Date(invoice.createdAt);
-            if (invoiceDate >= startDate && invoiceDate <= endDate) {
-                 const total = calculateTotal(invoice);
-                 const dateKey = format(invoiceDate, 'yyyy-MM-dd');
-                 salesByDay[dateKey] = (salesByDay[dateKey] || 0) + total;
-            }
+            invoice.payments.forEach(payment => {
+                try {
+                    const paymentDate = new Date(payment.date);
+                    if (paymentDate >= startDate && paymentDate <= endDate) {
+                        const dateKey = format(paymentDate, 'yyyy-MM-dd');
+                        dailyRevenue[dateKey] = (dailyRevenue[dateKey] || 0) + payment.amount;
+                    }
+                } catch(e) { /* ignore invalid dates */ }
+            });
         });
         
-        return Object.entries(salesByDay).map(([date, total]) => ({ date, total }));
-
+        return Object.entries(dailyRevenue).map(([date, total]) => ({ date, total }));
     }, [invoices]);
+
 
     const handleGenerateForecast = async () => {
         setIsLoading(true);
         setError(null);
         setForecast(null);
         try {
-            const result = await forecastSalesAction({ salesData: salesDataForForecast });
+            const result = await forecastSalesAction({ salesData: salesDataForForecast, locale });
             setForecast(result.forecast);
         } catch (err) {
             console.error(err);
@@ -243,16 +246,18 @@ function DashboardAnalytics({ invoices }: { invoices: Invoice[] }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('dashboard.stats.total_overdue')}</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalOverdue)}</div>
-            <p className="text-xs text-muted-foreground">{t('dashboard.stats.overdue_desc')}</p>
-          </CardContent>
-        </Card>
+        <Link href="/reports/aging-report" className="group block">
+            <Card className="transition-shadow group-hover:shadow-lg h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('dashboard.stats.total_overdue')}</CardTitle>
+                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(totalOverdue)}</div>
+                <p className="text-xs text-muted-foreground">{t('dashboard.stats.overdue_desc')}</p>
+            </CardContent>
+            </Card>
+        </Link>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{t('dashboard.stats.revenue_month')}</CardTitle>
@@ -378,32 +383,36 @@ export default function LoggedInDashboard() {
         </p>
       </div>
       <DashboardAnalytics invoices={invoices} />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link href="/reports/sales-analysis" className="group block">
-              <Card className="h-full transition-shadow duration-200 group-hover:shadow-lg">
-                  <CardHeader className="relative">
-                      <CardTitle>{t('dashboard.chart.sales_over_time')}</CardTitle>
-                      <CardDescription>{t('dashboard.chart.sales_desc')}</CardDescription>
-                      <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  </CardHeader>
-                  <CardContent>
-                      <DashboardSalesChart invoices={invoices} />
-                  </CardContent>
-              </Card>
-          </Link>
-          <Link href="/reports/performance" className="group block">
-              <Card className="h-full transition-shadow duration-200 group-hover:shadow-lg">
-                  <CardHeader className="relative">
-                      <CardTitle>{t('dashboard.chart.top_products')}</CardTitle>
-                      <CardDescription>{t('dashboard.chart.top_products_desc')}</CardDescription>
-                       <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  </CardHeader>
-                  <CardContent>
-                      <DashboardTopProductsChart invoices={invoices} />
-                  </CardContent>
-              </Card>
-          </Link>
-          <SalesForecast invoices={invoices} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Link href="/reports/sales-analysis" className="group block">
+                <Card className="h-full transition-shadow duration-200 group-hover:shadow-lg">
+                    <CardHeader className="relative">
+                        <CardTitle>{t('dashboard.chart.sales_over_time')}</CardTitle>
+                        <CardDescription>{t('dashboard.chart.sales_desc')}</CardDescription>
+                        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </CardHeader>
+                    <CardContent>
+                        <DashboardSalesChart invoices={invoices} />
+                    </CardContent>
+                </Card>
+            </Link>
+            <Link href="/reports/performance" className="group block">
+                <Card className="h-full transition-shadow duration-200 group-hover:shadow-lg">
+                    <CardHeader className="relative">
+                        <CardTitle>{t('dashboard.chart.top_products')}</CardTitle>
+                        <CardDescription>{t('dashboard.chart.top_products_desc')}</CardDescription>
+                        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    </CardHeader>
+                    <CardContent>
+                        <DashboardTopProductsChart invoices={invoices} />
+                    </CardContent>
+                </Card>
+            </Link>
+        </div>
+        <div className="lg:col-span-2">
+            <SalesForecast invoices={invoices} />
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -44,23 +43,23 @@ export default function WelcomeTour({ onClose }: WelcomeTourProps) {
   const features = [
     {
       icon: FileText,
-      title: t('tour.feature1.title'),
-      description: t('tour.feature1.desc'),
+      titleKey: 'tour.feature1.title',
+      descriptionKey: 'tour.feature1.desc',
     },
     {
       icon: Archive,
-      title: t('tour.feature2.title'),
-      description: t('tour.feature2.desc'),
+      titleKey: 'tour.feature2.title',
+      descriptionKey: 'tour.feature2.desc',
     },
     {
       icon: LineChart,
-      title: t('tour.feature3.title'),
-      description: t('tour.feature3.desc'),
+      titleKey: 'tour.feature3.title',
+      descriptionKey: 'tour.feature3.desc',
     },
     {
       icon: Sparkles,
-      title: t('tour.feature4.title'),
-      description: t('tour.feature4.desc'),
+      titleKey: 'tour.feature4.title',
+      descriptionKey: 'tour.feature4.desc',
     },
   ];
 
@@ -98,8 +97,8 @@ export default function WelcomeTour({ onClose }: WelcomeTourProps) {
                             <Icon className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
                           </div>
                           <div className="space-y-1">
-                            <h3 className="font-semibold text-base sm:text-lg">{feature.title}</h3>
-                            <p className="text-xs sm:text-sm text-muted-foreground text-center max-w-xs mx-auto">{feature.description}</p>
+                            <h3 className="font-semibold text-base sm:text-lg">{t(feature.titleKey)}</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground text-center max-w-xs mx-auto">{t(feature.descriptionKey)}</p>
                           </div>
                         </div>
                     </CarouselItem>

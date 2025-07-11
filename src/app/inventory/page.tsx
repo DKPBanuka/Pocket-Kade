@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -156,13 +155,13 @@ export default function InventoryPage() {
                 <Link href="/inventory/new" passHref>
                     <Button variant="outline" id="new-item-button">
                         <Plus className="mr-2 h-4 w-4" />
-                        New Item
+                        {t('inventory.new_item')}
                     </Button>
                 </Link>
                 <Link href="/inventory/new-shipment" passHref>
                     <Button>
                         <Truck className="mr-2 h-4 w-4" />
-                        New Shipment
+                        {t('inventory.new_shipment')}
                     </Button>
                 </Link>
             </div>
@@ -246,10 +245,10 @@ export default function InventoryPage() {
             </>
           ) : (
             <>
-              <h3 className="mt-4 text-xl font-semibold font-headline">Showcasing Inventory Tracking</h3>
-              <p className="mt-2 text-sm text-muted-foreground">This is where your inventory items would appear. Create a free account to start managing your stock.</p>
+              <h3 className="mt-4 text-xl font-semibold font-headline">{t('guest.inventory_title')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{t('guest.inventory_desc')}</p>
               <Link href="/signup" passHref>
-                <Button className="mt-6">Sign Up Free</Button>
+                <Button className="mt-6">{t('guest.signup_btn')}</Button>
               </Link>
             </>
           )}

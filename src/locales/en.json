@@ -586,5 +586,11 @@
   "tour.feature3.title": "Powerful Business Analysis",
   "tour.feature3.desc": "Unlock insights with detailed reports on sales, products, and profit.",
   "tour.feature4.title": "AI-Powered Forecasts",
-  "tour.feature4.desc": "Let our AI assistant help you with sales forecasts and smart suggestions."
+  "tour.feature4.desc": "Let our AI assistant help you with sales forecasts and smart suggestions.",
+  "guest.invoices_title": "Manage Invoices with Ease",
+  "guest.invoices_desc": "This is where your invoices will appear. Create, track, and manage all your billing in one place.",
+  "guest.inventory_title": "Showcasing Inventory Management",
+  "guest.inventory_desc": "This is where your stock items would appear. Create a free account to manage your own inventory.",
+  "guest.signup_btn": "Sign Up to Get Started",
+  "guest.sample_invoices": "Sample Invoices"
 }

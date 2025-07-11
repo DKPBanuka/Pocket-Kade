@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -48,15 +47,15 @@ export default function GuestDashboard() {
       {showWelcomeTour && <WelcomeTour onClose={handleWelcomeClose} />}
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
         <BarChart className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-xl font-semibold font-headline">Manage Invoices with Ease</h3>
-        <p className="mt-2 text-sm text-muted-foreground">This is where your invoices will appear. Create, track, and manage all your billing in one place.</p>
+        <h3 className="mt-4 text-xl font-semibold font-headline">{t('guest.invoices_title')}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{t('guest.invoices_desc')}</p>
         <Link href="/signup" passHref>
-          <Button className="mt-6">Sign Up to Get Started</Button>
+          <Button className="mt-6">{t('guest.signup_btn')}</Button>
         </Link>
       </div>
       {invoices.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-2xl font-bold font-headline mb-4">Sample Invoices</h2>
+          <h2 className="text-2xl font-bold font-headline mb-4">{t('guest.sample_invoices')}</h2>
           <InvoiceList invoices={invoices} />
         </div>
       )}
