@@ -1,15 +1,13 @@
 
 "use client";
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, TrendingDown, AlertTriangle, TrendingUp, PackageCheck, ChevronRight, Wallet, Banknote, Clock, Scale, Hourglass } from 'lucide-react';
+import { ArrowLeft, Loader2, TrendingUp, AlertTriangle, Wallet, Banknote, Clock, Scale, Hourglass, SlidersHorizontal } from 'lucide-react';
 import { useInventory } from '@/hooks/use-inventory';
-import { useInvoices } from '@/hooks/use-invoices';
-import { useExpenses } from '@/hooks/use-expenses';
-import type { InventoryItem, Invoice, Expense } from '@/lib/types';
+import type { InventoryItem } from '@/lib/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/language-context';
@@ -35,6 +33,18 @@ function ReportsDisplay({ inventory }: { inventory: InventoryItem[] }) {
             icon: Scale
         },
         {
+            title: t('analysis.performance.card_title'),
+            desc: t('analysis.performance.card_desc'),
+            href: "/reports/performance",
+            icon: SlidersHorizontal
+        },
+        {
+            title: t('analysis.sales.card_title'),
+            desc: t('analysis.sales.card_desc'),
+            href: "/reports/sales-analysis",
+            icon: TrendingUp,
+        },
+        {
             title: t('analysis.aging.title'),
             desc: t('analysis.aging.desc'),
             href: "/reports/aging-report",
@@ -51,7 +61,7 @@ function ReportsDisplay({ inventory }: { inventory: InventoryItem[] }) {
             desc: t('analysis.expense.desc'),
             href: "/reports/expense-analysis",
             icon: Wallet
-        }
+        },
     ];
 
   return (
@@ -84,15 +94,17 @@ function ReportsDisplay({ inventory }: { inventory: InventoryItem[] }) {
                 <div className="text-2xl font-bold">{formatCurrency(summaryStats.potentialProfit)}</div>
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('analysis.dashboard.low_stock')}</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{summaryStats.lowStockItemsCount}</div>
-            </CardContent>
-        </Card>
+        <Link href="/inventory?filter=low_stock" className="block group">
+            <Card className="transition-shadow group-hover:shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('analysis.dashboard.low_stock')}</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{summaryStats.lowStockItemsCount}</div>
+                </CardContent>
+            </Card>
+        </Link>
       </div>
       
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

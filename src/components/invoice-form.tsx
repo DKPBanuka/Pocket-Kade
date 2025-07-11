@@ -50,6 +50,7 @@ function ProductSelector({ form, index, availableInventory }: { form: any; index
     form.setValue(`lineItems.${index}.inventoryItemId`, item.id, { shouldValidate: true });
     form.setValue(`lineItems.${index}.description`, item.name, { shouldValidate: true });
     form.setValue(`lineItems.${index}.price`, item.price, { shouldValidate: true });
+    form.setValue(`lineItems.${index}.costPriceAtSale`, item.costPrice, { shouldValidate: true });
     form.setValue(`lineItems.${index}.warrantyPeriod`, item.warrantyPeriod || 'N/A', { shouldValidate: true });
     form.setValue(`lineItems.${index}.quantity`, 1, { shouldValidate: true });
     setOpen(false);
@@ -130,7 +131,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
   const formSchema = useMemo(() => {
     return z.object({
       customerId: z.string().optional(),
-      customerName: z.string().min(1, 'Customer name is required'),
+      customerName: z.string().optional(),
       customerPhone: z.string().optional(),
       status: z.enum(['Paid', 'Unpaid', 'Partially Paid']),
       discountType: z.enum(['percentage', 'fixed']).default('percentage'),
@@ -145,6 +146,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
             description: z.string(),
             quantity: z.coerce.number().min(1, 'Must be at least 1'),
             price: z.coerce.number().min(0, 'Price cannot be negative'),
+            costPriceAtSale: z.number().optional(),
             warrantyPeriod: z.string().min(1, 'Warranty period is required'),
           })
         )
@@ -237,6 +239,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
     defaultValues: isEditMode
         ? {
             ...invoice,
+            customerName: invoice.customerName || '',
             customerPhone: invoice.customerPhone || '',
             discountType: invoice.discountType || 'percentage',
             discountValue: invoice.discountValue || 0,
@@ -246,7 +249,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
             customerName: '',
             customerPhone: '',
             status: 'Paid',
-            lineItems: [{ type: 'product', description: '', quantity: 1, price: 0, warrantyPeriod: 'N/A' }],
+            lineItems: [{ type: 'product', description: '', quantity: 1, price: 0, costPriceAtSale: 0, warrantyPeriod: 'N/A' }],
             discountType: 'percentage',
             discountValue: 0,
             initialPayment: 0,
@@ -349,11 +352,16 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
   }, [watchLineItems, watchDiscountType, watchDiscountValue]);
 
   function onSubmit(values: InvoiceFormData) {
+    const dataToSubmit = {
+      ...values,
+      customerName: values.customerName || 'Walk-in Customer'
+    };
+
     if (isEditMode && invoice) {
-        const { status, initialPayment, ...updateData} = values; // Status is recalculated in the hook, so we don't pass it.
+        const { status, initialPayment, ...updateData} = dataToSubmit; // Status is recalculated in the hook, so we don't pass it.
         updateInvoice(invoice.id, updateData);
     } else {
-        addInvoice(values);
+        addInvoice(dataToSubmit);
     }
   }
 
@@ -431,6 +439,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
                                 form.setValue(`lineItems.${index}.inventoryItemId`, undefined);
                                 form.setValue(`lineItems.${index}.description`, '');
                                 form.setValue(`lineItems.${index}.price`, 0);
+                                form.setValue(`lineItems.${index}.costPriceAtSale`, 0);
                                 form.setValue(`lineItems.${index}.warrantyPeriod`, 'N/A');
                                 field.onChange(value);
                               }}
@@ -577,7 +586,7 @@ export default function InvoiceForm({ invoice }: InvoiceFormProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => append({ type: 'product', description: '', quantity: 1, price: 0, warrantyPeriod: 'N/A' })}
+              onClick={() => append({ type: 'product', description: '', quantity: 1, price: 0, costPriceAtSale: 0, warrantyPeriod: 'N/A' })}
               className="mt-6"
             >
               <Plus className="mr-2 h-4 w-4" />

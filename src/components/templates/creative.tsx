@@ -78,7 +78,7 @@ export default function CreativeTemplate({ invoice, organization, invoiceColor }
             </div>
             
              <div className="pt-4 sm:pt-8">
-                <div className="space-y-3 text-primary-foreground text-xs sm:text-sm">
+                <div className="space-y-3 text-foreground text-xs sm:text-sm">
                     <div className="flex items-center gap-3">
                         <Phone className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                         <span className="text-base">{organization?.phone || '+0123 456 7895'}</span>
@@ -106,7 +106,7 @@ export default function CreativeTemplate({ invoice, organization, invoiceColor }
             <div className="w-full sm:w-[1px] sm:bg-border sm:h-16 self-center border-t sm:border-t-0"></div>
             <div className="text-xs sm:text-right w-full sm:w-auto">
                 <p className="font-bold text-muted-foreground">Bill to</p>
-                <p className="font-bold text-base mt-1 text-foreground">{invoice.customerName}</p>
+                <p className="font-bold text-base mt-1 text-foreground">{invoice.customerName || 'Walk-in Customer'}</p>
                 {invoice.customerPhone && <p className="text-muted-foreground">{invoice.customerPhone}</p>}
             </div>
         </div>

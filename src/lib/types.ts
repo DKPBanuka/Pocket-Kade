@@ -94,6 +94,7 @@ export interface LineItem {
   quantity: number;
   price: number;
   warrantyPeriod: string;
+  costPriceAtSale?: number;
 }
 
 export type InvoiceStatus = 'Paid' | 'Unpaid' | 'Partially Paid' | 'Cancelled';
@@ -177,6 +178,7 @@ export interface Message {
   senderName: string;
   text: string;
   createdAt: any; // server timestamp
+  readBy: string[]; // Array of user UIDs who have read the message
 }
 
 export type StockMovementType = 'addition' | 'sale' | 'cancellation' | 'return' | 'adjustment';

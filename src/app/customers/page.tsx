@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Plus, Search, Users, Download, Contact } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCustomers } from '@/hooks/use-customers';
@@ -12,14 +11,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { exportToCsv } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/language-context';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function CustomersPage() {
-  const { customers, isLoading, deleteCustomer } = useCustomers();
+  const { customers, isLoading } = useCustomers();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const router = useRouter();
-  const { toast } = useToast();
   const { t } = useLanguage();
 
   const filteredCustomers = customers.filter(
@@ -51,6 +49,19 @@ export default function CustomersPage() {
     exportToCsv(dataToExport, `customers-${new Date().toISOString().split('T')[0]}`, headers);
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -62,28 +73,23 @@ export default function CustomersPage() {
             {t('customers.desc')}
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button variant="outline" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                {t('customers.export')}
-            </Button>
-            <Link href="/customers/new" passHref>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('customers.new')}
+        {user && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button variant="outline" onClick={handleExport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  {t('customers.export')}
               </Button>
-            </Link>
-        </div>
+              <Link href="/customers/new" passHref>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t('customers.new')}
+                </Button>
+              </Link>
+          </div>
+        )}
       </div>
 
-       {isLoading ? (
-        <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-        </div>
-      ) : customers.length > 0 ? (
+       {(user && customers.length > 0) || (user && searchTerm) ? (
         <>
           <div className="mb-6">
             <div className="relative">
@@ -97,21 +103,31 @@ export default function CustomersPage() {
                 />
             </div>
           </div>
-          <CustomerList customers={filteredCustomers} deleteCustomer={deleteCustomer} />
+          <CustomerList customers={filteredCustomers} />
         </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
-          <Users className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">{t('customers.no_customers_title')}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t('customers.no_customers_desc')}
-          </p>
-          <Link href="/customers/new" passHref>
-            <Button className="mt-6">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('customers.add_customer_btn')}
-            </Button>
-          </Link>
+          <Contact className="mx-auto h-12 w-12 text-muted-foreground" />
+            {user ? (
+              <>
+                <h3 className="mt-4 text-xl font-semibold font-headline">{t('customers.no_customers_title')}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t('customers.no_customers_desc')}</p>
+                <Link href="/customers/new" passHref>
+                  <Button className="mt-6">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('customers.add_customer_btn')}
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <h3 className="mt-4 text-xl font-semibold font-headline">Showcasing Customer Management</h3>
+                <p className="mt-2 text-sm text-muted-foreground">This is where your customers would appear. Create a free account to start managing your own customer data.</p>
+                <Link href="/signup" passHref>
+                  <Button className="mt-6">Sign Up Free</Button>
+                </Link>
+              </>
+            )}
         </div>
       )}
     </div>

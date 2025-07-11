@@ -16,6 +16,7 @@ import {
   doc,
   updateDoc,
   getDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { UserRole } from '@/lib/types';
@@ -244,5 +245,62 @@ export async function updateOrganizationInvoiceSettingsAction(
   } catch (error) {
     console.error('Error updating organization invoice settings:', error);
     return { success: false, error: 'Could not update invoice settings.' };
+  }
+}
+
+
+export async function completeUserOnboardingAction(
+  uid: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { onboardingCompleted: true });
+    return { success: true };
+  } catch (error) {
+    console.error('Error completing onboarding:', error);
+    return { success: false, error: 'Could not complete onboarding.' };
+  }
+}
+
+export async function addSampleProductForTour(
+  tenantId: string
+): Promise<{ success: boolean; productId?: string; error?: string }> {
+  if (!tenantId) {
+    return { success: false, error: 'Tenant ID is required.' };
+  }
+  try {
+    const newDocRef = await addDoc(collection(db, 'inventory'), {
+      tenantId,
+      name: 'Sample Product',
+      category: 'Electronics',
+      brand: 'TourBrand',
+      quantity: 50,
+      price: 1500,
+      costPrice: 1000,
+      reorderPoint: 10,
+      status: 'Available',
+      warrantyPeriod: '1 Year',
+      createdAt: serverTimestamp(),
+    });
+    return { success: true, productId: newDocRef.id };
+  } catch (error) {
+    console.error('Error adding sample product:', error);
+    return { success: false, error: 'Could not create sample product.' };
+  }
+}
+
+export async function deleteSampleProductForTour(
+  productId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!productId) {
+    return { success: false, error: 'Product ID is required.' };
+  }
+  try {
+    const docRef = doc(db, 'inventory', productId);
+    await deleteDoc(docRef);
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting sample product:', error);
+    return { success: false, error: 'Could not delete sample product.' };
   }
 }

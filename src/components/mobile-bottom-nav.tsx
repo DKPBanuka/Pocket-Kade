@@ -31,11 +31,11 @@ export default function MobileBottomNav() {
   }
   
   const navItems = [
-    { href: '/', label: t('sidebar.dashboard'), icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'] },
-    { href: '/invoices', label: t('sidebar.invoices'), icon: FileText, roles: ['owner', 'admin', 'staff'] },
-    { href: '/inventory', label: t('sidebar.inventory'), icon: Archive, roles: ['owner', 'admin', 'staff'] },
-    { href: user.activeRole === 'staff' ? '/expenses/new' : '/expenses', label: t('sidebar.expenses'), icon: Wallet, roles: ['owner', 'admin', 'staff'] },
-    { href: '/reports', label: t('sidebar.analysis'), icon: LineChart, roles: ['owner', 'admin'] },
+    { href: '/', label: t('sidebar.dashboard'), icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'], id: 'mobile-dashboard-link' },
+    { href: '/invoices', label: t('sidebar.invoices'), icon: FileText, roles: ['owner', 'admin', 'staff'], id: 'mobile-invoices-link' },
+    { href: '/inventory', label: t('sidebar.inventory'), icon: Archive, roles: ['owner', 'admin', 'staff'], id: 'mobile-inventory-link' },
+    { href: user.activeRole === 'staff' ? '/expenses/new' : '/expenses', label: t('sidebar.expenses'), icon: Wallet, roles: ['owner', 'admin', 'staff'], id: 'mobile-expenses-link' },
+    { href: '/reports', label: t('sidebar.analysis'), icon: LineChart, roles: ['owner', 'admin'], id: 'mobile-reports-link' },
   ];
 
   const availableNavItems = navItems.filter(item => item.roles.includes(user.activeRole!));
@@ -55,6 +55,7 @@ export default function MobileBottomNav() {
         {availableNavItems.map((item) => (
           <Link
             key={item.href}
+            id={item.id}
             href={item.href}
             className={cn(
                 "inline-flex flex-1 flex-col items-center justify-center px-1 text-center hover:bg-muted group",

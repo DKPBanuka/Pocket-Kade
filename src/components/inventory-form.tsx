@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,6 +28,12 @@ import type { InventoryItem, ItemStatus } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import SupplierSelector from './supplier-selector';
 import { useLanguage } from '@/contexts/language-context';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const formSchema = z.object({
   name: z.string().min(2, 'Item name is required'),
@@ -73,10 +79,10 @@ export default function InventoryForm({ item }: InventoryFormProps) {
             supplierName: item.supplierName || ''
         }
         : { 
-            name: '', 
+            name: '',
             category: '',
             brand: '',
-            price: 0, 
+            price: 0,
             costPrice: 0, 
             quantity: 0, 
             reorderPoint: 0,
@@ -228,7 +234,17 @@ export default function InventoryForm({ item }: InventoryFormProps) {
                 name="reorderPoint"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>{t('inventory.form.reorder_point')}</FormLabel>
+                      <FormLabel className="flex items-center gap-1.5">
+                        {t('inventory.form.reorder_point')}
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild><button type="button" onClick={(e) => e.preventDefault()}><HelpCircle className="h-4 w-4 text-muted-foreground" /></button></TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="max-w-xs">When stock reaches this level, you'll get a notification.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                      </FormLabel>
                     <FormControl>
                         <Input type="number" placeholder="10" {...field} onFocus={(e) => e.target.select()} />
                     </FormControl>
@@ -293,7 +309,7 @@ export default function InventoryForm({ item }: InventoryFormProps) {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+          <Button type="submit" size="lg" disabled={form.formState.isSubmitting} id="save-item-button">
             {form.formState.isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isEditMode ? t('inventory.form.updating') : t('inventory.form.adding')}

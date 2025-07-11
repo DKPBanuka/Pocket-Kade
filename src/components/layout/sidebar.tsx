@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -33,16 +34,16 @@ export default function AppSidebar() {
   }
 
   const navItems = [
-    { href: '/', label: t('sidebar.dashboard'), icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'] },
-    { href: '/invoices', label: t('sidebar.invoices'), icon: FileText, roles: ['owner', 'admin', 'staff'] },
-    { href: '/customers', label: t('sidebar.customers'), icon: Contact, roles: ['owner', 'admin', 'staff'] },
-    { href: '/inventory', label: t('sidebar.inventory'), icon: Archive, roles: ['owner', 'admin', 'staff'] },
-    { href: user.activeRole === 'staff' ? '/expenses/new' : '/expenses', label: t('sidebar.expenses'), icon: Wallet, roles: ['owner', 'admin', 'staff'] },
-    { href: '/returns', label: t('sidebar.returns'), icon: Undo2, roles: ['owner', 'admin', 'staff'] },
-    { href: '/messages', label: t('sidebar.messages'), icon: MessageSquare, roles: ['owner', 'admin', 'staff'] },
-    { href: '/suppliers', label: t('sidebar.suppliers'), icon: Truck, roles: ['owner', 'admin'] },
-    { href: '/reports', label: t('sidebar.analysis'), icon: LineChart, roles: ['owner', 'admin'] },
-    { href: '/users', label: t('sidebar.users'), icon: Users, roles: ['owner'] },
+    { href: '/', label: t('sidebar.dashboard'), icon: LayoutDashboard, roles: ['owner', 'admin', 'staff'], id: 'sidebar-dashboard-link' },
+    { href: '/invoices', label: t('sidebar.invoices'), icon: FileText, roles: ['owner', 'admin', 'staff'], id: 'sidebar-invoices-link' },
+    { href: '/customers', label: t('sidebar.customers'), icon: Contact, roles: ['owner', 'admin', 'staff'], id: 'sidebar-customers-link' },
+    { href: '/inventory', label: t('sidebar.inventory'), icon: Archive, roles: ['owner', 'admin', 'staff'], id: 'sidebar-inventory-link' },
+    { href: user.activeRole === 'staff' ? '/expenses/new' : '/expenses', label: t('sidebar.expenses'), icon: Wallet, roles: ['owner', 'admin', 'staff'], id: 'sidebar-expenses-link' },
+    { href: '/returns', label: t('sidebar.returns'), icon: Undo2, roles: ['owner', 'admin', 'staff'], id: 'sidebar-returns-link' },
+    { href: '/messages', label: t('sidebar.messages'), icon: MessageSquare, roles: ['owner', 'admin', 'staff'], id: 'sidebar-messages-link' },
+    { href: '/suppliers', label: t('sidebar.suppliers'), icon: Truck, roles: ['owner', 'admin'], id: 'sidebar-suppliers-link' },
+    { href: '/reports', label: t('sidebar.analysis'), icon: LineChart, roles: ['owner', 'admin'], id: 'sidebar-analysis-link' },
+    { href: '/users', label: t('sidebar.users'), icon: Users, roles: ['owner'], id: 'sidebar-users-link' },
   ];
 
 
@@ -65,7 +66,9 @@ export default function AppSidebar() {
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="group-data-[collapsible=icon]:border-r">
         <SidebarHeader>
-            <Logo />
+            <div className="flex h-9 w-full items-center justify-center group-data-[collapsible=icon]:w-9">
+                <Logo />
+            </div>
         </SidebarHeader>
         <SidebarContent>
             <SidebarMenu>
@@ -75,6 +78,7 @@ export default function AppSidebar() {
                             asChild
                             isActive={isLinkActive(item.href)}
                             tooltip={{children: item.label}}
+                            id={item.id}
                         >
                              <Link href={item.href} onClick={handleLinkClick}>
                                 <item.icon />
@@ -100,7 +104,7 @@ export default function AppSidebar() {
                 <SidebarMenuItem>
                      <SidebarMenuButton
                         asChild
-                        className="h-auto justify-start p-2"
+                        className="h-auto justify-start p-2 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center"
                         variant="ghost"
                         size="default"
                         isActive={isLinkActive('/settings')}
@@ -109,7 +113,7 @@ export default function AppSidebar() {
                             <Avatar className="size-8">
                                 <AvatarFallback>{user.username.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <div className="flex flex-col items-start text-left">
+                            <div className="flex flex-col items-start text-left group-data-[collapsible=icon]:hidden">
                                <span className="font-medium">{user.username}</span>
                                <span className="text-xs uppercase text-muted-foreground">{user.activeRole}</span>
                             </div>
@@ -124,7 +128,7 @@ export default function AppSidebar() {
                         tooltip={{children: t('sidebar.logout')}}
                     >
                         <LogOut />
-                        <span>{t('sidebar.logout')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('sidebar.logout')}</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>

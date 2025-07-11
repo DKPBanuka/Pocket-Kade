@@ -25,13 +25,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Separator } from './ui/separator';
-import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context';
+import { useCustomers } from '@/hooks/use-customers';
 import { useLanguage } from '@/contexts/language-context';
 
 interface CustomerListProps {
   customers: Customer[];
-  deleteCustomer: (id: string) => void;
 }
 
 function DeleteDialog({ customer, deleteCustomer, asChild, children }: { customer: Customer; deleteCustomer: (id: string) => void; asChild?: boolean; children: React.ReactNode; }) {
@@ -59,8 +58,11 @@ function DeleteDialog({ customer, deleteCustomer, asChild, children }: { custome
   );
 }
 
-export default function CustomerList({ customers, deleteCustomer }: CustomerListProps) {
+export default function CustomerList({ customers }: CustomerListProps) {
+  const { user } = useAuth();
+  const { deleteCustomer } = useCustomers();
   const { t } = useLanguage();
+
   if (customers.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-10">
@@ -93,18 +95,22 @@ export default function CustomerList({ customers, deleteCustomer }: CustomerList
                   {customer.email ? <a href={`mailto:${customer.email}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>{customer.email}</a> : <span className="text-muted-foreground">N/A</span>}
                 </TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Link href={`/customers/${customer.id}/edit`} passHref onClick={(e) => e.stopPropagation()}>
-                    <Button variant="outline" size="icon">
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit Customer</span>
-                    </Button>
-                  </Link>
-                  <DeleteDialog customer={customer} deleteCustomer={deleteCustomer} asChild>
-                    <Button variant="destructive" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete Customer</span>
-                    </Button>
-                  </DeleteDialog>
+                  {user && (
+                    <>
+                      <Link href={`/customers/${customer.id}/edit`} passHref onClick={(e) => e.stopPropagation()}>
+                        <Button variant="outline" size="icon">
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit Customer</span>
+                        </Button>
+                      </Link>
+                      <DeleteDialog customer={customer} deleteCustomer={deleteCustomer} asChild>
+                        <Button variant="destructive" size="icon">
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete Customer</span>
+                        </Button>
+                      </DeleteDialog>
+                    </>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -137,18 +143,20 @@ export default function CustomerList({ customers, deleteCustomer }: CustomerList
                     </CardContent>
                 </Card>
             </Link>
-            <div className="absolute top-2 right-2 z-10">
-                <DeleteDialog customer={customer} deleteCustomer={deleteCustomer} asChild>
-                    <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete Customer</span>
-                    </Button>
-                </DeleteDialog>
-            </div>
+            {user && (
+              <div className="absolute top-2 right-2 z-10">
+                  <DeleteDialog customer={customer} deleteCustomer={deleteCustomer} asChild>
+                      <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete Customer</span>
+                      </Button>
+                  </DeleteDialog>
+              </div>
+            )}
           </div>
         ))}
       </div>

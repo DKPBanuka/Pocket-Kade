@@ -27,7 +27,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
 
   useEffect(() => {
-    if (!user || !user.activeTenantId) {
+    if (!user?.activeTenantId) {
       setConversations([]);
       setIsLoadingConversations(false);
       return;

@@ -69,13 +69,14 @@ export const lineItemServerSchema = z.object({
     description: z.string().min(1, { message: "Line item description cannot be empty." }),
     quantity: z.number().min(1, { message: "Quantity must be at least 1." }),
     price: z.number().min(0, { message: "Price cannot be negative." }),
+    costPriceAtSale: z.number().optional(),
     warrantyPeriod: z.string().min(1, { message: "Warranty period is required." }),
 });
 
 export const invoiceServerObjectSchema = z.object({
     tenantId: z.string().min(1),
     customerId: z.string().optional(),
-    customerName: z.string().min(1, { message: "Customer name is required." }),
+    customerName: z.string().optional(),
     customerPhone: z.string().optional(),
     discountType: z.enum(['percentage', 'fixed']).default('percentage'),
     discountValue: z.coerce.number().min(0, "Discount value can't be negative").default(0),

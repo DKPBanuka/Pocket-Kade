@@ -103,7 +103,7 @@ export function useInventory() {
         const totalAdditionalExpenses = transportCost + otherExpenses;
         const totalPurchaseValue = lineItems.reduce((acc, item) => acc + item.quantity * item.unitCostPrice, 0);
         const totalLandedCost = totalPurchaseValue + totalAdditionalExpenses;
-        const totalRequiredRevenue = totalLandedCost + targetProfit;
+        const totalRequiredRevenue = totalLandedCost + numTargetProfit;
 
         for (const item of lineItems) {
             const itemTotalValue = item.quantity * item.unitCostPrice;
@@ -292,6 +292,12 @@ export function useInventory() {
       const updatePayload: any = { ...validationResult.data };
       
       if (addStock && addStock !== 0) {
+        const currentStock = currentItemData.quantity;
+        if (currentStock + addStock < 0) {
+            toast({ title: "Invalid Operation", description: "Not enough stock to remove.", variant: "destructive" });
+            return;
+        }
+
         updatePayload.quantity = increment(addStock);
         
         const movementRef = doc(collection(db, STOCK_MOVEMENTS_COLLECTION));

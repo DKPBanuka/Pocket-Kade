@@ -16,6 +16,7 @@ import {
   increment,
   serverTimestamp,
   orderBy,
+  arrayUnion,
 } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import type { Conversation, Message, AuthUser } from '@/lib/types';
@@ -43,8 +44,18 @@ export function useChat() {
     );
     
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => {
-        const data = doc.data();
+      const batch = writeBatch(db);
+      let hasUnread = false;
+
+      const msgs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+
+        // Mark message as read by current user if they are not the sender
+        if (data.senderId !== user.uid && Array.isArray(data.readBy) && !data.readBy.includes(user.uid)) {
+          hasUnread = true;
+          batch.update(docSnap.ref, { readBy: arrayUnion(user.uid) });
+        }
+
         const ts = data.createdAt;
         let normalizedTs: any = ts;
 
@@ -61,17 +72,23 @@ export function useChat() {
               }
             }
           }
-        } else if (doc.metadata.hasPendingWrites) {
+        } else if (docSnap.metadata.hasPendingWrites) {
           normalizedTs = { toDate: () => new Date() };
         }
         
         return {
-          id: doc.id,
+          id: docSnap.id,
           ...data,
+          readBy: data.readBy || [], // Ensure readBy is always an array
           createdAt: normalizedTs,
         }
       }) as Message[];
       setMessages(msgs);
+
+      // Commit the read receipts update
+      if (hasUnread) {
+        batch.commit().catch(console.error);
+      }
 
       // Reset unread count for the current user when they view messages
       const convoRef = doc(db, 'conversations', conversationId);
@@ -108,6 +125,7 @@ export function useChat() {
       senderName: user.username,
       text: text,
       createdAt: serverTimestamp(),
+      readBy: [user.uid], // Sender has implicitly read it
     };
     
     const lastMessageText = text.trim();

@@ -48,9 +48,10 @@ export default function WelcomePage() {
         username: data.username,
       });
 
-      // Navigate to the next step instead of reloading to prevent loops.
-      // The details page will handle redirecting staff members appropriately.
-      router.push('/setup/details');
+      // Force a hard reload to the next page.
+      // This ensures the AuthProvider re-evaluates the user's state cleanly,
+      // preventing redirect loops caused by stale context state.
+      window.location.href = '/setup/details';
 
     } catch (error) {
       console.error('Error updating user:', error);

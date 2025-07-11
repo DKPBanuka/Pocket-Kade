@@ -57,6 +57,12 @@ export default function ViewInventoryItemPage() {
   const isLoading = inventoryLoading || authLoading || movementsLoading;
 
   useEffect(() => {
+    if (!authLoading && user?.activeRole === 'staff') {
+      router.push('/inventory');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
     if (!inventoryLoading && id) {
       const foundItem = getInventoryItem(id);
       setItem(foundItem || null);
@@ -84,7 +90,7 @@ export default function ViewInventoryItemPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !item || user?.activeRole === 'staff') {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -102,7 +108,7 @@ export default function ViewInventoryItemPage() {
     );
   }
 
-  const isPrivilegedUser = user?.activeRole === 'admin' || user?.activeRole === 'owner';
+  const isPrivilegedUser = user && (user.activeRole === 'admin' || user.activeRole === 'owner');
 
   return (
     <div className="container mx-auto max-w-6xl p-4 sm:p-6 lg:p-8 space-y-8">

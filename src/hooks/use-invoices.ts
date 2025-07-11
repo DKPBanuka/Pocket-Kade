@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import type { Invoice, InvoiceStatus, Payment, InventoryItem } from '@/lib/types';
+import type { Invoice, InvoiceStatus, Payment, InventoryItem, LineItem } from '@/lib/types';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, writeBatch, query, orderBy, limit, getDocs, increment, where, arrayUnion, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
@@ -64,7 +64,8 @@ export function useInvoices() {
 
     let q = query(
         collection(db, INVOICES_COLLECTION), 
-        where("tenantId", "==", user.activeTenantId)
+        where("tenantId", "==", user.activeTenantId),
+        orderBy("createdAt", "desc")
     );
     
     const unsubscribe = onSnapshot(q, 
@@ -92,7 +93,7 @@ export function useInvoices() {
             createdAt: normalizedCreatedAt,
           } as Invoice;
         });
-        setInvoices(invoicesData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setInvoices(invoicesData);
         setIsLoading(false);
       },
       (error) => {
@@ -159,7 +160,9 @@ export function useInvoices() {
     try {
       const batch = writeBatch(db);
       
+      const enrichedLineItems: LineItem[] = [];
       for (const lineItem of validationResult.data.lineItems) {
+        let costPriceAtSale = lineItem.costPriceAtSale;
         if (lineItem.type === 'product' && lineItem.inventoryItemId) {
             const itemDocRef = doc(db, INVENTORY_COLLECTION, lineItem.inventoryItemId);
             const itemSnap = await getDoc(itemDocRef);
@@ -171,26 +174,26 @@ export function useInvoices() {
                 });
                 return;
             }
+            if(costPriceAtSale === undefined) {
+              costPriceAtSale = itemSnap.data().costPrice;
+            }
         }
+        enrichedLineItems.push({...lineItem, id: lineItem.id || crypto.randomUUID(), costPriceAtSale });
       }
 
       const invoiceId = await generateInvoiceNumber();
 
-      // Start building the final payload from validated data
       const invoicePayload: any = { 
         ...validationResult.data,
         id: invoiceId,
-        status: status, // Add back the status from original data
+        status: status,
         payments: [],
         createdBy: user.uid,
         createdByName: user.username,
         createdAt: serverTimestamp(),
+        lineItems: enrichedLineItems,
       };
       
-      // Ensure all line items have a unique ID
-      invoicePayload.lineItems = invoicePayload.lineItems.map((item: any) => ({...item, id: item.id || crypto.randomUUID()}));
-
-      // Calculate initial payment based on status
       if (status === 'Paid') {
         const payment: Payment = {
           id: crypto.randomUUID(), amount: totalAmount, date: new Date().toISOString(), method: 'Cash',
@@ -210,7 +213,7 @@ export function useInvoices() {
 
       batch.set(invoiceDocRef, cleanedData);
 
-      for (const lineItem of newInvoiceData.lineItems) {
+      for (const lineItem of invoicePayload.lineItems) {
         if (lineItem.inventoryItemId && lineItem.type === 'product') {
             const itemDocRef = doc(db, INVENTORY_COLLECTION, lineItem.inventoryItemId);
             batch.update(itemDocRef, { quantity: increment(-lineItem.quantity) });
@@ -232,7 +235,7 @@ export function useInvoices() {
                 const newQuantity = itemData.quantity - lineItem.quantity;
                 if (newQuantity <= itemData.reorderPoint && itemData.quantity > itemData.reorderPoint) {
                     const adminsSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
-                    adminsSnapshot.forEach(adminDoc => {
+                    adminsSnapshot.docs.forEach(adminDoc => {
                         const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
                         batch.set(notificationRef, {
                             recipientUid: adminDoc.id, senderName: "System", 
@@ -294,16 +297,33 @@ export function useInvoices() {
     try {
       const batch = writeBatch(db);
       const invoiceDocRef = doc(db, INVOICES_COLLECTION, id);
+      
+      if(updatedData.lineItems) {
+        const enrichedLineItems: LineItem[] = [];
+        for (const lineItem of updatedData.lineItems) {
+          let costPriceAtSale = lineItem.costPriceAtSale;
+          if (lineItem.type === 'product' && lineItem.inventoryItemId && costPriceAtSale === undefined) {
+              const itemDocRef = doc(db, INVENTORY_COLLECTION, lineItem.inventoryItemId);
+              const itemSnap = await getDoc(itemDocRef);
+              if (itemSnap.exists()) {
+                  costPriceAtSale = itemSnap.data().costPrice;
+              }
+          }
+          enrichedLineItems.push({...lineItem, id: lineItem.id || crypto.randomUUID(), costPriceAtSale });
+        }
+        updatedData.lineItems = enrichedLineItems;
+      }
+
 
       const stockAdjustments = new Map<string, number>();
       originalInvoice.lineItems.forEach(item => {
           if (item.inventoryItemId) {
-              stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) + item.quantity);
+              stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) - item.quantity); // Re-add to stock
           }
       });
       updatedData.lineItems?.forEach(item => {
           if (item.inventoryItemId) {
-              stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) - item.quantity);
+              stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) + item.quantity); // Remove from stock
           }
       });
       
@@ -316,7 +336,7 @@ export function useInvoices() {
                   return;
               }
               const currentStock = itemSnap.data().quantity;
-              if (currentStock - quantityChange < 0) {
+              if (currentStock - quantityChange < 0) { // If subtracting stock makes it negative
                   toast({ title: "Stock Unavailable", description: `Not enough stock for ${itemSnap.data().name}.`, variant: "destructive"});
                   return;
               }
@@ -326,7 +346,7 @@ export function useInvoices() {
       for (const [itemId, quantityChange] of stockAdjustments.entries()) {
           if (quantityChange !== 0) {
               const itemDocRef = doc(db, INVENTORY_COLLECTION, itemId);
-              batch.update(itemDocRef, { quantity: increment(-quantityChange) });
+              batch.update(itemDocRef, { quantity: increment(-quantityChange) }); // use negative to correctly decrement stock
           }
       }
 

@@ -80,9 +80,11 @@ export default function ViewCustomerPage() {
                     <Button variant="outline" onClick={() => router.back()}>
                         <ArrowLeft className="mr-2 h-4 w-4" /> {t('general.back')}
                     </Button>
-                    <Link href={`/customers/${customer.id}/edit`} passHref>
-                        <Button><Edit className="mr-2 h-4 w-4" /> {t('customer.view.edit')}</Button>
-                    </Link>
+                    {user && (
+                      <Link href={`/customers/${customer.id}/edit`} passHref>
+                          <Button><Edit className="mr-2 h-4 w-4" /> {t('customer.view.edit')}</Button>
+                      </Link>
+                    )}
                 </div>
             </div>
 

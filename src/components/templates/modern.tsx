@@ -84,7 +84,7 @@ export default function ModernTemplate({ invoice, organization, invoiceColor }: 
       <section className="p-6 sm:p-8 grid md:grid-cols-2 gap-4">
         <div>
           <h3 className="font-semibold text-muted-foreground uppercase tracking-wider text-xs">Billed To</h3>
-          <p className="font-bold text-base text-foreground mt-1">{invoice.customerName}</p>
+          <p className="font-bold text-base text-foreground mt-1">{invoice.customerName || 'Walk-in Customer'}</p>
           {invoice.customerPhone && <p className="text-muted-foreground">{invoice.customerPhone}</p>}
         </div>
         <div className="text-left md:text-right">

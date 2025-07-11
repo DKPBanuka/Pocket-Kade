@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, writeBatch, collection, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { AuthUser, UserRole, Organization } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
@@ -46,7 +46,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        let userDocSnap = await getDoc(userDocRef);
+
+        // Handle first-time Google Sign-In
+        if (!userDocSnap.exists()) {
+            const batch = writeBatch(db);
+            const orgRef = doc(collection(db, 'organizations'));
+            const orgName = firebaseUser.displayName ? `${firebaseUser.displayName.split(' ')[0]}'s Store` : "My New Store";
+            batch.set(orgRef, {
+                name: orgName,
+                ownerUid: firebaseUser.uid,
+                createdAt: serverTimestamp(),
+                onboardingCompleted: false,
+                selectedTheme: 'system',
+            });
+            const tenantId = orgRef.id;
+
+            batch.set(userDocRef, {
+                username: firebaseUser.displayName || `user_${firebaseUser.uid.substring(0,5)}`,
+                email: firebaseUser.email,
+                onboardingCompleted: false,
+                tenants: { [tenantId]: 'owner' },
+                createdAt: serverTimestamp(),
+            });
+            await batch.commit();
+            userDocSnap = await getDoc(userDocRef); // Re-fetch the newly created doc
+        }
         
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
@@ -104,64 +129,73 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-    
+    if (isLoading) return;
+
     const isOnboardingRoute = pathname.startsWith('/setup');
-    const isProtectedRoute = !unprotectedRoutes.some(route => pathname.startsWith(route)) && !isOnboardingRoute;
+    const isGuestSession = typeof window !== 'undefined' && sessionStorage.getItem('isGuest') === 'true';
 
-    if (!user) {
-      if (isProtectedRoute) {
-        router.push('/login');
+    // --- LOGGED IN User Logic ---
+    if (user) {
+      if (isGuestSession) sessionStorage.removeItem('isGuest');
+
+      // 1. Redirect to onboarding if not completed.
+      if (!user.onboardingCompleted && !isOnboardingRoute) {
+        if(user.activeRole !== 'staff') {
+            router.push('/setup/welcome');
+        } else { 
+            router.push('/setup/language');
+        }
+        return;
       }
-      return;
-    }
 
-    if (unprotectedRoutes.some(route => pathname.startsWith(route))) {
-      router.push('/');
-      return;
-    }
-
-    // Onboarding redirection logic
-    if (!user.onboardingCompleted && !isOnboardingRoute) {
-      router.push('/setup/welcome');
-      return;
-    }
-
-    if (user.onboardingCompleted && user.activeRole !== 'staff' && organization && !organization.onboardingCompleted && !isOnboardingRoute) {
-      router.push('/setup/details');
-      return;
-    }
-    
-    if ((organization?.onboardingCompleted || user.activeRole === 'staff') && user.onboardingCompleted && isOnboardingRoute) {
+      // 2. Redirect to org details if user is done but org isn't
+      if (user.onboardingCompleted && user.activeRole !== 'staff' && organization && !organization.onboardingCompleted && !isOnboardingRoute) {
+        router.push('/setup/details');
+        return;
+      }
+      
+      // 3. Redirect away from onboarding if everything is complete.
+      if (user.onboardingCompleted && (organization?.onboardingCompleted || user.activeRole === 'staff') && isOnboardingRoute) {
         router.push('/');
         return;
-    }
-
-    // Role-based route protection
-    if (pathname.startsWith('/users') && user.activeRole !== 'owner') {
-      router.push('/');
-    }
-    if (pathname.startsWith('/reports') && user.activeRole === 'staff') {
+      }
+      
+      // 4. Redirect logged-in users from public pages.
+      if (unprotectedRoutes.some(r => pathname.startsWith(r))) {
         router.push('/');
-    }
-    if (pathname.startsWith('/suppliers') && user.activeRole === 'staff') {
-        router.push('/');
-    }
-    // Staff can't edit inventory items
-    if (pathname.match(/^\/inventory\/.+\/edit$/) && user.activeRole === 'staff') {
-        router.push('/inventory');
-    }
-    // Staff can only create expenses, not view the list or edit
-     if (pathname.startsWith('/expenses') && user.activeRole === 'staff' && !pathname.endsWith('/new')) {
-        router.push('/expenses/new');
-    }
+        return;
+      }
 
+      // 5. Role-based route protection
+      if (pathname.startsWith('/users') && user.activeRole !== 'owner') router.push('/');
+      if (pathname.startsWith('/reports') && user.activeRole === 'staff') router.push('/');
+      if (pathname.startsWith('/suppliers') && user.activeRole === 'staff') router.push('/');
+      if (pathname.match(/^\/inventory\/.+\/edit$/) && user.activeRole === 'staff') router.push('/inventory');
+      if (pathname.startsWith('/expenses') && user.activeRole === 'staff' && !pathname.endsWith('/new')) router.push('/expenses/new');
+    
+    // --- GUEST User Logic ---
+    } else {
+      const isAllowedGuestRoute = unprotectedRoutes.some(r => pathname.startsWith(r)) || isOnboardingRoute;
+
+      if (isGuestSession) {
+        const protectedRoutes = ['/settings', '/users', '/messages', '/profile', '/returns/new'];
+        if (protectedRoutes.some(p => pathname.startsWith(p)) || pathname.includes('/edit')) {
+            router.push('/login');
+        }
+        return;
+      }
+      
+      if (!isAllowedGuestRoute) {
+        router.push('/login');
+      }
+    }
   }, [user, organization, isLoading, pathname, router]);
 
   const handleSignOut = async () => {
     await signOut(auth);
+    if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('isGuest');
+    }
     setUser(null);
     setOrganization(null);
     router.push('/login');
@@ -172,14 +206,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
   );
-
+  
+  // This logic ensures that even on a page refresh, we show a loader until auth state is confirmed.
   if (isLoading) {
     return <FullScreenLoader />;
   }
   
-  if (!user && !unprotectedRoutes.some(route => pathname.startsWith(route)) && !pathname.startsWith('/setup')) {
-     return <FullScreenLoader />;
+  const isPublicRoute = unprotectedRoutes.some(r => pathname.startsWith(r));
+  if (!user && !isPublicRoute && !(typeof window !== 'undefined' && sessionStorage.getItem('isGuest') === 'true')) {
+    return <FullScreenLoader />;
   }
+
 
   return (
     <AuthContext.Provider value={{ user, organization, isLoading, signOut: handleSignOut }}>

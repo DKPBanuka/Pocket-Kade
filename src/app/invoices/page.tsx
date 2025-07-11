@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Plus, Search, FileText, Download, Settings } from 'lucide-react';
+import { Plus, Search, FileText, Download, Settings, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useInvoices } from '@/hooks/use-invoices';
@@ -129,29 +129,31 @@ export default function InvoicesPage() {
               {t('invoices.desc')}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-              {isPrivilegedUser && (
-                <InvoiceSettingsDialog>
-                    <Button variant="outline" size="sm" className="w-9 px-0 sm:w-auto sm:px-3">
-                        <Settings className="h-4 w-4" />
-                        <span className="sr-only sm:not-sr-only sm:ml-2">Customize</span>
-                    </Button>
-                </InvoiceSettingsDialog>
-              )}
-              <Button variant="outline" onClick={handleExport} size="sm" className="w-9 px-0 sm:w-auto sm:px-3">
-                  <Download className="h-4 w-4" />
-                  <span className="sr-only sm:not-sr-only sm:ml-2">{t('invoices.export')}</span>
-              </Button>
-              <Link href="/invoice/new" passHref>
-                <Button>
-                  <Plus className="h-5 w-5" />
-                  <span className="sm:ml-2">{t('invoices.new')}</span>
+          {user && (
+            <div className="flex items-center gap-2">
+                {isPrivilegedUser && (
+                  <InvoiceSettingsDialog>
+                      <Button variant="outline" size="sm" className="w-9 px-0 sm:w-auto sm:px-3">
+                          <Settings className="h-4 w-4" />
+                          <span className="sr-only sm:not-sr-only sm:ml-2">Customize</span>
+                      </Button>
+                  </InvoiceSettingsDialog>
+                )}
+                <Button variant="outline" onClick={handleExport} size="sm" className="w-9 px-0 sm:w-auto sm:px-3">
+                    <Download className="h-4 w-4" />
+                    <span className="sr-only sm:not-sr-only sm:ml-2">{t('invoices.export')}</span>
                 </Button>
-              </Link>
-          </div>
+                <Link href="/invoice/new" passHref>
+                  <Button id="new-invoice-button">
+                    <Plus className="h-5 w-5" />
+                    <span className="sm:ml-2">{t('invoices.new')}</span>
+                  </Button>
+                </Link>
+            </div>
+          )}
       </div>
 
-      {activeInvoices.length > 0 ? (
+      {(user && invoices.length > 0) || (!user && !isLoading) ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="relative">
@@ -188,17 +190,27 @@ export default function InvoicesPage() {
         </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
-          <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">{t('invoices.no_invoices_title')}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {t('invoices.no_invoices_desc')}
-          </p>
-          <Link href="/invoice/new" passHref>
-            <Button className="mt-6">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('invoices.create_invoice_btn')}
-            </Button>
-          </Link>
+            <BarChart className="mx-auto h-12 w-12 text-muted-foreground" />
+            {user ? (
+              <>
+                <h3 className="mt-4 text-xl font-semibold font-headline">{t('invoices.no_invoices_title')}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{t('invoices.no_invoices_desc')}</p>
+                <Link href="/invoice/new" passHref>
+                  <Button className="mt-6">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('invoices.create_invoice_btn')}
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <h3 className="mt-4 text-xl font-semibold font-headline">Manage Invoices with Ease</h3>
+                <p className="mt-2 text-sm text-muted-foreground">This is where your invoices will appear. Create, track, and manage all your billing in one place.</p>
+                <Link href="/signup" passHref>
+                  <Button className="mt-6">Sign Up to Get Started</Button>
+                </Link>
+              </>
+            )}
         </div>
       )}
     </div>

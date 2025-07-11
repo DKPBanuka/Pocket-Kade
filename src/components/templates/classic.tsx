@@ -99,7 +99,7 @@ export default function ClassicTemplate({ invoice, organization, invoiceColor }:
         <div className="grid grid-cols-1 sm:grid-cols-2 text-sm gap-4">
             <div>
                 <p className="text-muted-foreground font-semibold">Billed To</p>
-                <p className="font-medium text-lg">{invoice.customerName}</p>
+                <p className="font-medium text-lg">{invoice.customerName || 'Walk-in Customer'}</p>
                 {invoice.customerPhone && (
                     <a href={`tel:${invoice.customerPhone}`} className="text-muted-foreground hover:underline hover:text-primary">{invoice.customerPhone}</a>
                 )}

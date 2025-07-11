@@ -62,21 +62,21 @@ function SyncStatus() {
         </>
     )}
     </div>
-  )
+  );
 }
 
 
 export default function AppHeader() {
-  const { user, isLoading, signOut } = useAuth();
+  const { user } = useAuth();
   
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 no-print">
       <div className="flex h-16 items-center px-4 sm:px-6">
         <div className="flex items-center">
-            <SidebarTrigger />
+            {user ? <SidebarTrigger /> : <Logo />}
         </div>
         <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-            {!isLoading && user && (
+            {user ? (
                 <>
                 <LanguageSwitcher />
                 <NotificationBell />
@@ -88,6 +88,12 @@ export default function AppHeader() {
                     <p className="text-sm sm:text-base text-muted-foreground">{user.username}</p>
                     <Badge variant="outline" className="uppercase text-xs sm:text-sm">{user.activeRole}</Badge>
                 </div>
+                </>
+            ) : (
+                <>
+                    <LanguageSwitcher />
+                    <Button variant="ghost" asChild><Link href="/login">Log In</Link></Button>
+                    <Button asChild><Link href="/signup">Sign Up</Link></Button>
                 </>
             )}
         </div>

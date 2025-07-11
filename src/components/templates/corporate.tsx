@@ -85,7 +85,7 @@ export default function CorporateTemplate({ invoice, organization, invoiceColor 
         <div className="mt-8 grid grid-cols-2 gap-4">
           <div>
             <h3 className="font-semibold text-sm" style={{ color: color }}>INVOICE TO:</h3>
-            <p className="font-bold mt-1 text-base text-foreground">{invoice.customerName}</p>
+            <p className="font-bold mt-1 text-base text-foreground">{invoice.customerName || 'Walk-in Customer'}</p>
             {invoice.customerPhone && <p className="text-muted-foreground text-sm">Phone: {invoice.customerPhone}</p>}
           </div>
         </div>

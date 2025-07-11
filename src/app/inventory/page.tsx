@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Archive, Search, LineChart, Download, Truck } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Plus, Archive, Search, LineChart, Download, Truck, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/hooks/use-inventory';
 import InventoryList from '@/components/inventory-list';
@@ -21,17 +22,28 @@ import { useAuth } from '@/contexts/auth-context';
 import { format } from 'date-fns';
 import { exportToCsv } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export default function InventoryPage() {
-  const { inventory, isLoading: inventoryLoading, deleteInventoryItem } = useInventory();
+  const { inventory, isLoading: inventoryLoading } = useInventory();
   const { user, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ItemStatus | 'All'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [brandFilter, setBrandFilter] = useState<string>('All');
+  const [specialFilter, setSpecialFilter] = useState<string | null>(null);
 
   const isLoading = inventoryLoading || authLoading;
+
+  useEffect(() => {
+    const filter = searchParams.get('filter');
+    if (filter === 'low_stock') {
+      setSpecialFilter('low_stock');
+    }
+  }, [searchParams]);
 
   const { totalItemTypes, totalStockQuantity, uniqueCategories, uniqueBrands } = useMemo(() => {
     const totalStock = inventory.reduce((sum, item) => sum + item.quantity, 0);
@@ -54,10 +66,13 @@ export default function InventoryPage() {
         const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
         const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
         const matchesBrand = brandFilter === 'All' || item.brand === brandFilter;
-        return matchesSearch && matchesStatus && matchesCategory && matchesBrand;
+        
+        const matchesSpecialFilter = !specialFilter || (specialFilter === 'low_stock' && item.quantity <= item.reorderPoint);
+
+        return matchesSearch && matchesStatus && matchesCategory && matchesBrand && matchesSpecialFilter;
       }
     );
-  }, [inventory, searchTerm, statusFilter, categoryFilter, brandFilter]);
+  }, [inventory, searchTerm, statusFilter, categoryFilter, brandFilter, specialFilter]);
 
   const handleExport = () => {
     const isPrivilegedUser = user?.activeRole === 'admin' || user?.activeRole === 'owner';
@@ -126,23 +141,20 @@ export default function InventoryPage() {
             {t('inventory.desc', { itemCount: totalItemTypes, unitCount: totalStockQuantity })}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                {t('inventory.export')}
-            </Button>
-            {isPrivilegedUser && (
+        {user && isPrivilegedUser && (
+            <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    {t('inventory.export')}
+                </Button>
                 <Link href="/reports" passHref>
                     <Button variant="outline">
                         <LineChart className="mr-2 h-4 w-4" />
                         {t('inventory.analysis')}
                     </Button>
                 </Link>
-            )}
-            {isPrivilegedUser && (
-                <>
                 <Link href="/inventory/new" passHref>
-                    <Button variant="outline">
+                    <Button variant="outline" id="new-item-button">
                         <Plus className="mr-2 h-4 w-4" />
                         New Item
                     </Button>
@@ -153,15 +165,14 @@ export default function InventoryPage() {
                         New Shipment
                     </Button>
                 </Link>
-                </>
-            )}
-        </div>
+            </div>
+        )}
       </div>
 
-      {inventory.length > 0 ? (
+      {(user && inventory.length > 0) || (user && searchTerm) ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="relative lg:col-span-2">
+            <div className="relative lg:col-span-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                 type="text"
@@ -170,6 +181,19 @@ export default function InventoryPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 />
+            </div>
+            <div className="lg:col-span-4 flex flex-wrap gap-2">
+                 <ToggleGroup 
+                    type="single" 
+                    variant="outline" 
+                    value={specialFilter} 
+                    onValueChange={(value) => setSpecialFilter(value)}
+                  >
+                    <ToggleGroupItem value="low_stock" aria-label="Toggle low stock">
+                      <AlertTriangle className="mr-2 h-4 w-4" />
+                      Low Stock
+                    </ToggleGroupItem>
+                  </ToggleGroup>
             </div>
              <Select onValueChange={(value) => setBrandFilter(value)} defaultValue="All">
                 <SelectTrigger className="shadow-sm">
@@ -200,22 +224,34 @@ export default function InventoryPage() {
                 </SelectContent>
             </Select>
           </div>
-          <InventoryList inventory={filteredInventory} deleteInventoryItem={deleteInventoryItem} />
+          <InventoryList inventory={filteredInventory} />
         </>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted bg-card/50 p-12 text-center">
           <Archive className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold font-headline">{t('inventory.no_items_title')}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {isPrivilegedUser ? t('inventory.no_items_desc_privileged') : t('inventory.no_items_desc_staff')}
-          </p>
-          {isPrivilegedUser && (
-            <Link href="/inventory/new" passHref>
-                <Button className="mt-6">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('inventory.add_item_btn')}
-                </Button>
-            </Link>
+          {user ? (
+            <>
+              <h3 className="mt-4 text-xl font-semibold font-headline">{t('inventory.no_items_title')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isPrivilegedUser ? t('inventory.no_items_desc_privileged') : t('inventory.no_items_desc_staff')}
+              </p>
+              {isPrivilegedUser && (
+                <Link href="/inventory/new" passHref>
+                    <Button className="mt-6" id="new-item-button">
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('inventory.add_item_btn')}
+                    </Button>
+                </Link>
+              )}
+            </>
+          ) : (
+            <>
+              <h3 className="mt-4 text-xl font-semibold font-headline">Showcasing Inventory Tracking</h3>
+              <p className="mt-2 text-sm text-muted-foreground">This is where your inventory items would appear. Create a free account to start managing your stock.</p>
+              <Link href="/signup" passHref>
+                <Button className="mt-6">Sign Up Free</Button>
+              </Link>
+            </>
           )}
         </div>
       )}

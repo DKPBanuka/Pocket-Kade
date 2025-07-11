@@ -56,7 +56,7 @@ export default function InvoiceDetailPage() {
   const isLoading = invoicesLoading || authLoading;
 
   useEffect(() => {
-    if (!isLoading && id) {
+    if (!invoicesLoading && id) {
       const foundInvoice = getInvoice(id);
       if (foundInvoice) {
         setInvoice(foundInvoice);
@@ -64,10 +64,12 @@ export default function InvoiceDetailPage() {
         router.push('/');
       }
     }
-  }, [id, getInvoice, isLoading, router]);
+  }, [id, getInvoice, invoicesLoading, router]);
   
   const getTemplateComponent = () => {
-    switch (organization?.invoiceTemplate) {
+    // For guests, organization might be null, so default to classic.
+    const templateName = organization?.invoiceTemplate || 'classic';
+    switch (templateName) {
         case 'modern':
             return ModernTemplate;
         case 'corporate':
@@ -97,8 +99,8 @@ export default function InvoiceDetailPage() {
   }
 
   const TemplateToRender = getTemplateComponent();
-  const isActionable = invoice.status !== 'Cancelled' && invoice.status !== 'Paid';
-  const isPrivilegedUser = user?.activeRole === 'admin' || user?.activeRole === 'owner';
+  const isActionable = user && invoice.status !== 'Cancelled' && invoice.status !== 'Paid';
+  const isPrivilegedUser = user && (user.activeRole === 'admin' || user.activeRole === 'owner');
 
   return (
     <div className="bg-muted/30 min-h-screen">
@@ -108,84 +110,86 @@ export default function InvoiceDetailPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t('general.back')}
                 </Button>
-                <div className="hidden sm:flex items-center gap-2">
-                    {isActionable && (
-                        <AddPaymentDialog invoice={invoice} addPaymentToInvoice={addPaymentToInvoice}>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                {t('invoice.view.add_payment')}
-                            </Button>
-                        </AddPaymentDialog>
-                    )}
-                    
-                    {isPrivilegedUser && invoice.status !== 'Cancelled' && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">{t('invoice.view.more_actions')}</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => router.push(`/invoice/${id}/edit`)}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    <span>{t('invoice.view.edit')}</span>
-                                </DropdownMenuItem>
-                                <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                        <FileX2 className="mr-2 h-4 w-4" />
-                                        <span>{t('invoice.view.cancel')}</span>
-                                    </DropdownMenuItem>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>{t('invoice.view.cancel_confirm_title')}</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        {t('invoice.view.cancel_confirm_desc', { invoiceId: invoice.id })}
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => cancelInvoice(invoice.id)} className="bg-destructive hover:bg-destructive/90">
-                                        {t('invoice.view.confirm_cancellation')}
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                                </AlertDialog>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
-                     <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="outline">
-                                <Eye className="mr-2 h-4 w-4"/> {t('invoice.view.preview')}
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 print-dialog-content">
-                            <DialogHeader className="p-4 border-b print-hide-in-dialog">
-                                <DialogTitle>Invoice Preview</DialogTitle>
-                                <DialogDescription>
-                                    This is how your invoice will look when printed.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
-                                <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
-                                    <TemplateToRender
-                                        invoice={invoice}
-                                        organization={organization}
-                                        invoiceColor={organization?.invoiceColor}
-                                    />
-                                </div>
-                            </div>
-                            <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between print-hide-in-dialog">
-                                <span className="text-xs text-muted-foreground">Tip: Use your browser's print options to save as PDF.</span>
-                                <Button onClick={handlePrint}>
-                                    <Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
-                </div>
+                {user && (
+                  <div className="hidden sm:flex items-center gap-2">
+                      {isActionable && (
+                          <AddPaymentDialog invoice={invoice} addPaymentToInvoice={addPaymentToInvoice}>
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                  {t('invoice.view.add_payment')}
+                              </Button>
+                          </AddPaymentDialog>
+                      )}
+                      
+                      {isPrivilegedUser && invoice.status !== 'Cancelled' && (
+                          <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                      <span className="sr-only">{t('invoice.view.more_actions')}</span>
+                                  </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onSelect={() => router.push(`/invoice/${id}/edit`)}>
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      <span>{t('invoice.view.edit')}</span>
+                                  </DropdownMenuItem>
+                                  <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                          <FileX2 className="mr-2 h-4 w-4" />
+                                          <span>{t('invoice.view.cancel')}</span>
+                                      </DropdownMenuItem>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                      <AlertDialogTitle>{t('invoice.view.cancel_confirm_title')}</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                          {t('invoice.view.cancel_confirm_desc', { invoiceId: invoice.id })}
+                                      </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                      <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => cancelInvoice(invoice.id)} className="bg-destructive hover:bg-destructive/90">
+                                          {t('invoice.view.confirm_cancellation')}
+                                      </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                  </AlertDialog>
+                              </DropdownMenuContent>
+                          </DropdownMenu>
+                      )}
+                       <Dialog>
+                          <DialogTrigger asChild>
+                              <Button variant="outline">
+                                  <Eye className="mr-2 h-4 w-4"/> {t('invoice.view.preview')}
+                              </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 print-dialog-content">
+                              <DialogHeader className="p-4 border-b print-hide-in-dialog">
+                                  <DialogTitle>Invoice Preview</DialogTitle>
+                                  <DialogDescription>
+                                      This is how your invoice will look when printed.
+                                  </DialogDescription>
+                              </DialogHeader>
+                              <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
+                                  <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
+                                      <TemplateToRender
+                                          invoice={invoice}
+                                          organization={organization}
+                                          invoiceColor={organization?.invoiceColor}
+                                      />
+                                  </div>
+                              </div>
+                              <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between print-hide-in-dialog">
+                                  <span className="text-xs text-muted-foreground">Tip: Use your browser's print options to save as PDF.</span>
+                                  <Button onClick={handlePrint}>
+                                      <Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}
+                                  </Button>
+                              </DialogFooter>
+                          </DialogContent>
+                      </Dialog>
+                  </div>
+                )}
             </div>
             
             <div className="print-hide">
@@ -198,68 +202,70 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Mobile Action Bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-2 flex items-center justify-around gap-1">
-             {isActionable && (
-                <AddPaymentDialog invoice={invoice} addPaymentToInvoice={addPaymentToInvoice}>
-                    <Button variant="ghost" className="flex-1 flex-col h-auto p-1 text-green-600 hover:text-green-600">
-                        <CreditCard className="h-5 w-5 mb-1" />
-                        <span className="text-xs font-semibold">{t('invoice.view.add_payment')}</span>
-                    </Button>
-                </AddPaymentDialog>
-            )}
+        {user && (
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t p-2 flex items-center justify-around gap-1">
+              {isActionable && (
+                  <AddPaymentDialog invoice={invoice} addPaymentToInvoice={addPaymentToInvoice}>
+                      <Button variant="ghost" className="flex-1 flex-col h-auto p-1 text-green-600 hover:text-green-600">
+                          <CreditCard className="h-5 w-5 mb-1" />
+                          <span className="text-xs font-semibold">{t('invoice.view.add_payment')}</span>
+                      </Button>
+                  </AddPaymentDialog>
+              )}
 
-            {isPrivilegedUser && invoice.status !== 'Cancelled' && (
-                <Button variant="ghost" className="flex-1 flex-col h-auto p-1" onClick={() => router.push(`/invoice/${id}/edit`)}>
-                    <Edit className="h-5 w-5 mb-1" />
-                    <span className="text-xs">{t('invoice.view.edit')}</span>
-                </Button>
-            )}
-            
-            <Dialog>
-                <DialogTrigger asChild>
-                     <Button variant="ghost" className="flex-1 flex-col h-auto p-1">
-                        <Printer className="h-5 w-5 mb-1" />
-                        <span className="text-xs">{t('invoice.view.print')}</span>
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 print-dialog-content">
-                    <DialogHeader className="p-4 border-b print-hide-in-dialog">
-                        <DialogTitle>Invoice Preview</DialogTitle>
-                        <DialogDescription>This is how your invoice will look when printed.</DialogDescription>
-                    </DialogHeader>
-                    <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
-                        <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
-                            <TemplateToRender invoice={invoice} organization={organization} invoiceColor={organization?.invoiceColor} />
-                        </div>
-                    </div>
-                    <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between print-hide-in-dialog">
-                        <span className="text-xs text-muted-foreground">Tip: Use your browser's print options to save as PDF.</span>
-                        <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+              {isPrivilegedUser && invoice.status !== 'Cancelled' && (
+                  <Button variant="ghost" className="flex-1 flex-col h-auto p-1" onClick={() => router.push(`/invoice/${id}/edit`)}>
+                      <Edit className="h-5 w-5 mb-1" />
+                      <span className="text-xs">{t('invoice.view.edit')}</span>
+                  </Button>
+              )}
+              
+              <Dialog>
+                  <DialogTrigger asChild>
+                      <Button variant="ghost" className="flex-1 flex-col h-auto p-1">
+                          <Printer className="h-5 w-5 mb-1" />
+                          <span className="text-xs">{t('invoice.view.print')}</span>
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 sm:p-0 print-dialog-content">
+                      <DialogHeader className="p-4 border-b print-hide-in-dialog">
+                          <DialogTitle>Invoice Preview</DialogTitle>
+                          <DialogDescription>This is how your invoice will look when printed.</DialogDescription>
+                      </DialogHeader>
+                      <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
+                          <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
+                              <TemplateToRender invoice={invoice} organization={organization} invoiceColor={organization?.invoiceColor} />
+                          </div>
+                      </div>
+                      <DialogFooter className="p-4 border-t bg-background rounded-b-lg sm:justify-between print-hide-in-dialog">
+                          <span className="text-xs text-muted-foreground">Tip: Use your browser's print options to save as PDF.</span>
+                          <Button onClick={handlePrint}><Printer className="mr-2 h-4 w-4" /> {t('invoice.view.print')}</Button>
+                      </DialogFooter>
+                  </DialogContent>
+              </Dialog>
 
-            {isPrivilegedUser && invoice.status !== 'Cancelled' && (
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="ghost" className="flex-1 flex-col h-auto p-1 text-destructive hover:text-destructive">
-                            <FileX2 className="h-5 w-5 mb-1" />
-                            <span className="text-xs">{t('invoice.view.cancel')}</span>
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>{t('invoice.view.cancel_confirm_title')}</AlertDialogTitle>
-                            <AlertDialogDescription>{t('invoice.view.cancel_confirm_desc', { invoiceId: invoice.id })}</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => cancelInvoice(invoice.id)} className="bg-destructive hover:bg-destructive/90">{t('invoice.view.confirm_cancellation')}</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
-        </div>
+              {isPrivilegedUser && invoice.status !== 'Cancelled' && (
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="ghost" className="flex-1 flex-col h-auto p-1 text-destructive hover:text-destructive">
+                              <FileX2 className="h-5 w-5 mb-1" />
+                              <span className="text-xs">{t('invoice.view.cancel')}</span>
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>{t('invoice.view.cancel_confirm_title')}</AlertDialogTitle>
+                              <AlertDialogDescription>{t('invoice.view.cancel_confirm_desc', { invoiceId: invoice.id })}</AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>{t('invoice.view.go_back')}</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => cancelInvoice(invoice.id)} className="bg-destructive hover:bg-destructive/90">{t('invoice.view.confirm_cancellation')}</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              )}
+          </div>
+        )}
     </div>
   );
 }

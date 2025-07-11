@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NewChatDialog } from './new-chat-dialog';
-import { Loader2, Send, Users, MessageSquare, Plus, ArrowLeft } from 'lucide-react';
+import { Loader2, Send, Users, MessageSquare, Plus, ArrowLeft, Check, CheckCheck } from 'lucide-react';
 import type { Conversation, Message } from '@/lib/types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -119,8 +119,17 @@ function DateSeparator({ date }: { date: Date }) {
     );
 }
 
+function MessageStatus({ message, otherParticipantId }: { message: Message; otherParticipantId?: string }) {
+    if (message.readBy && otherParticipantId && message.readBy.includes(otherParticipantId)) {
+        return <CheckCheck className="h-4 w-4 text-accent" />; // Read by other participant
+    }
+    return <Check className="h-4 w-4 text-primary-foreground/70" />; // Sent/Delivered
+}
+
+
 function ChatWindow({
   conversationId,
+  otherParticipantId,
   otherUsername,
   messages,
   isLoadingMessages,
@@ -128,6 +137,7 @@ function ChatWindow({
   onBack
 }: {
   conversationId: string;
+  otherParticipantId?: string;
   otherUsername: string | undefined;
   messages: Message[];
   isLoadingMessages: boolean;
@@ -219,9 +229,12 @@ function ChatWindow({
                                 )}
                             >
                             <p className="whitespace-pre-wrap">{message.text}</p>
-                            <p className="mt-1 text-right text-xs opacity-70">
-                                {message.createdAt ? format(message.createdAt.toDate(), 'p') : ''}
-                            </p>
+                            <div className="mt-1 flex items-center justify-end gap-1.5 text-xs opacity-70">
+                                <span className="text-primary-foreground/70">{message.createdAt ? format(message.createdAt.toDate(), 'p') : ''}</span>
+                                {message.senderId === user?.uid && (
+                                    <MessageStatus message={message} otherParticipantId={otherParticipantId} />
+                                )}
+                            </div>
                             </div>
                         </div>
                     );
@@ -323,6 +336,7 @@ export default function ChatLayout() {
           {selectedConversationId ? (
             <ChatWindow 
               conversationId={selectedConversationId} 
+              otherParticipantId={otherParticipantId}
               otherUsername={otherUsername}
               messages={messages}
               isLoadingMessages={isLoadingMessages}
