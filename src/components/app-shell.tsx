@@ -9,11 +9,13 @@ import AppSidebar from '@/components/layout/sidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MobileBottomNav from '@/components/mobile-bottom-nav';
 import { useTheme } from 'next-themes';
+import { useAI } from '@/contexts/ai-context';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const { user, organization } = useAuth();
     const { setTheme } = useTheme();
+    const { isAssistantOpen } = useAI();
 
     useEffect(() => {
         if (organization?.selectedTheme) {
@@ -37,7 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <AppHeader />
                 <main className="pb-16 md:pb-0">{children}</main>
             </SidebarInset>
-            {user && <MobileBottomNav />} {/* Only show mobile nav for logged-in users */}
+            {!isAssistantOpen && user && <MobileBottomNav />} {/* Only show mobile nav for logged-in users and when AI is closed */}
         </SidebarProvider>
     );
 }

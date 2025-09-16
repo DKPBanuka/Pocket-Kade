@@ -23,8 +23,9 @@ interface TemplateProps {
 }
 
 const getWarrantyEndDate = (startDate: string, warrantyPeriod: string): string => {
+    if (!startDate) return 'N/A';
     const date = new Date(startDate);
-    if (warrantyPeriod === 'N/A') return 'N/A';
+    if (warrantyPeriod === 'N/A' || isNaN(date.getTime())) return 'N/A';
     
     const parts = warrantyPeriod.split(' ');
     if (parts.length !== 2) return 'N/A';
@@ -106,7 +107,7 @@ export default function ClassicTemplate({ invoice, organization, invoiceColor }:
             </div>
             <div className='sm:text-right'>
                 <p className="text-muted-foreground font-semibold">Invoice Date</p>
-                <p>{format(new Date(invoice.createdAt), 'PPP')}</p>
+                <p>{invoice.createdAt ? format(new Date(invoice.createdAt), 'PPP') : format(new Date(), 'PPP')}</p>
             </div>
         </div>
       </CardHeader>

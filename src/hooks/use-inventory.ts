@@ -49,8 +49,6 @@ export function useInventory() {
             normalizedCreatedAt = new Date(ts.seconds * 1000).toISOString();
           } else if (typeof ts === 'string' && !isNaN(new Date(ts).getTime())) {
             normalizedCreatedAt = ts;
-          } else if (doc.metadata.hasPendingWrites) {
-            normalizedCreatedAt = new Date().toISOString();
           } else {
             normalizedCreatedAt = new Date().toISOString();
           }
@@ -103,7 +101,7 @@ export function useInventory() {
         const totalAdditionalExpenses = transportCost + otherExpenses;
         const totalPurchaseValue = lineItems.reduce((acc, item) => acc + item.quantity * item.unitCostPrice, 0);
         const totalLandedCost = totalPurchaseValue + totalAdditionalExpenses;
-        const totalRequiredRevenue = totalLandedCost + numTargetProfit;
+        const totalRequiredRevenue = totalLandedCost + targetProfit;
 
         for (const item of lineItems) {
             const itemTotalValue = item.quantity * item.unitCostPrice;
@@ -111,8 +109,7 @@ export function useInventory() {
             
             let suggestedPrice = landedCost;
             if (targetProfit > 0 && totalLandedCost > 0) {
-                const profitMarginRatio = totalRequiredRevenue / totalLandedCost;
-                const rawSuggestedPrice = landedCost * profitMarginRatio;
+                const rawSuggestedPrice = landedCost * (totalRequiredRevenue / totalLandedCost);
                 suggestedPrice = Math.round(rawSuggestedPrice / 10) * 10;
             }
 
@@ -152,7 +149,7 @@ export function useInventory() {
                     status: 'Available',
                     warrantyPeriod: 'N/A',
                     brand: '',
-                    createdAt: serverTimestamp(),
+                    createdAt: new Date().toISOString(),
                 });
             }
             
@@ -208,7 +205,7 @@ export function useInventory() {
       batch.set(newDocRef, {
         ...validationResult.data,
         quantity: quantity || 0,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
 
       if (quantity && quantity > 0) {
@@ -258,9 +255,9 @@ export function useInventory() {
   }, [inventory, user]);
 
   const updateInventoryItem = useCallback(async (id: string, updatedData: Partial<Omit<InventoryItem, 'id' | 'quantity' | 'createdAt' | 'tenantId'>> & { addStock?: number }) => {
-     if (user?.activeRole === 'staff') {
-      toast({ title: "Permission Denied", description: "You do not have permission to update items.", variant: "destructive" });
-      return;
+    if (user?.activeRole === 'staff') {
+        toast({ title: "Permission Denied", description: "You do not have permission to update items.", variant: "destructive" });
+        return;
     }
     if (!user?.activeTenantId || !user.username) {
         toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
@@ -280,76 +277,74 @@ export function useInventory() {
 
     const itemDocRef = doc(db, INVENTORY_COLLECTION, id);
     try {
-      const batch = writeBatch(db);
-      
-      const itemSnap = await getDoc(itemDocRef);
-      if (!itemSnap.exists()) {
-          toast({ title: "Error", description: "Item not found.", variant: "destructive" });
-          return;
-      }
-      const currentItemData = itemSnap.data() as InventoryItem;
-
-      const updatePayload: any = { ...validationResult.data };
-      
-      if (addStock && addStock !== 0) {
-        const currentStock = currentItemData.quantity;
-        if (currentStock + addStock < 0) {
-            toast({ title: "Invalid Operation", description: "Not enough stock to remove.", variant: "destructive" });
+        const batch = writeBatch(db);
+        
+        const itemSnap = await getDoc(itemDocRef);
+        if (!itemSnap.exists()) {
+            toast({ title: "Error", description: "Item not found.", variant: "destructive" });
             return;
         }
+        const currentItemData = itemSnap.data() as InventoryItem;
 
-        updatePayload.quantity = increment(addStock);
+        const updatePayload: any = { ...validationResult.data };
         
-        const movementRef = doc(collection(db, STOCK_MOVEMENTS_COLLECTION));
-        batch.set(movementRef, {
-            inventoryItemId: id,
-            tenantId: user.activeTenantId,
-            type: addStock > 0 ? 'addition' : 'adjustment',
-            quantity: addStock,
-            referenceId: 'Manual Stock Update',
-            createdAt: serverTimestamp(),
-            createdByName: user.username,
-        });
+        if (addStock && addStock !== 0) {
+            updatePayload.quantity = increment(addStock);
+        }
+
+        const finalData = Object.assign({}, currentItemData, updatePayload);
         
-        const newQuantity = currentItemData.quantity + addStock;
-        if (newQuantity <= currentItemData.reorderPoint && currentItemData.quantity > currentItemData.reorderPoint) {
-            const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
-            usersSnapshot.docs.forEach(userDoc => {
+        batch.update(itemDocRef, finalData);
+
+        if (addStock && addStock !== 0) {
+            const movementRef = doc(collection(db, STOCK_MOVEMENTS_COLLECTION));
+            batch.set(movementRef, {
+                inventoryItemId: id,
+                tenantId: user.activeTenantId,
+                type: addStock > 0 ? 'addition' : 'adjustment',
+                quantity: addStock,
+                referenceId: 'Manual Stock Update',
+                createdAt: serverTimestamp(),
+                createdByName: user.username,
+            });
+
+            const newQuantity = currentItemData.quantity + addStock;
+            if (newQuantity <= currentItemData.reorderPoint && currentItemData.quantity > currentItemData.reorderPoint) {
+                const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
+                usersSnapshot.docs.forEach(userDoc => {
+                    const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
+                    batch.set(notificationRef, {
+                        recipientUid: userDoc.id, senderName: "System", 
+                        messageKey: 'notifications.inventory.low_stock',
+                        messageParams: { item: currentItemData.name, count: newQuantity },
+                        link: `/inventory/${id}/edit`, read: false, createdAt: serverTimestamp(), type: 'low-stock'
+                    });
+                });
+            }
+        }
+        
+        const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
+        usersSnapshot.docs.forEach(userDoc => {
+            if (userDoc.id !== user.uid) {
                 const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
                 batch.set(notificationRef, {
-                    recipientUid: userDoc.id, senderName: "System", 
-                    messageKey: 'notifications.inventory.low_stock',
-                    messageParams: { item: currentItemData.name, count: newQuantity },
-                    link: `/inventory/${id}/edit`, read: false, createdAt: serverTimestamp(), type: 'low-stock'
+                    recipientUid: userDoc.id, senderName: user.username,
+                    messageKey: 'notifications.inventory.item_updated',
+                    messageParams: { user: user.username, item: updatedData.name || currentItemData.name },
+                    link: `/inventory/${id}/edit`, read: false, createdAt: serverTimestamp(), type: 'inventory'
                 });
-            });
-        }
-      }
-      
-      batch.update(itemDocRef, updatePayload);
-      
-      const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
-      usersSnapshot.docs.forEach(userDoc => {
-          if (userDoc.id !== user.uid) {
-              const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
-              batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username,
-                  messageKey: 'notifications.inventory.item_updated',
-                  messageParams: { user: user.username, item: updatedData.name || currentItemData.name },
-                  link: `/inventory/${id}/edit`, read: false, createdAt: serverTimestamp(), type: 'inventory'
-              });
-          }
-      });
-      
-      await batch.commit();
-      
-      toast({
-        title: "Item Updated",
-        description: `Item has been successfully updated.`,
-      });
+            }
+        });
+        
+        await batch.commit();
+        
+        toast({
+            title: "Item Updated",
+            description: `Item has been successfully updated.`,
+        });
     } catch (error) {
-      console.error("Error updating inventory item:", error);
-      toast({ title: "Error", description: "Failed to update inventory item.", variant: "destructive" });
+        console.error("Error updating inventory item:", error);
+        toast({ title: "Error", description: "Failed to update inventory item.", variant: "destructive" });
     }
   }, [toast, user]);
 

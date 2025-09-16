@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import ClientProviders from '@/components/client-providers';
+import AIAssistantDialog from '@/components/ai-assistant-dialog';
 
 export const metadata: Metadata = {
   title: 'Pocket කඩේ',
@@ -41,7 +42,10 @@ export default function RootLayout({
           'min-h-screen bg-background font-body antialiased',
         )}
       >
-        <ClientProviders>{children}</ClientProviders>
+        <ClientProviders>
+          {children}
+          <AIAssistantDialog />
+        </ClientProviders>
       </body>
     </html>
   );

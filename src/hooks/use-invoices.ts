@@ -77,20 +77,31 @@ export function useInvoices() {
 
           if (ts && typeof ts.toDate === 'function') {
             normalizedCreatedAt = ts.toDate().toISOString();
-          } else if (ts && typeof ts.seconds === 'number') {
-            normalizedCreatedAt = new Date(ts.seconds * 1000).toISOString();
-          } else if (typeof ts === 'string' && !isNaN(new Date(ts).getTime())) {
+          } else if (typeof ts === 'string') {
             normalizedCreatedAt = ts;
-          } else if (doc.metadata.hasPendingWrites) {
-            normalizedCreatedAt = new Date().toISOString();
           } else {
             normalizedCreatedAt = new Date().toISOString();
           }
+          
+          const normalizedPayments = (data.payments || []).map((p: any) => {
+              const paymentTs = p.date;
+              let normalizedPaymentDate: string;
+               if (paymentTs && typeof paymentTs.toDate === 'function') {
+                normalizedPaymentDate = paymentTs.toDate().toISOString();
+              } else if (typeof paymentTs === 'string') {
+                normalizedPaymentDate = paymentTs;
+              } else {
+                normalizedPaymentDate = new Date().toISOString();
+              }
+              return {...p, date: normalizedPaymentDate };
+          });
+
 
           return {
             id: doc.id,
             ...data,
             createdAt: normalizedCreatedAt,
+            payments: normalizedPayments
           } as Invoice;
         });
         setInvoices(invoicesData);
@@ -190,7 +201,7 @@ export function useInvoices() {
         payments: [],
         createdBy: user.uid,
         createdByName: user.username,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
         lineItems: enrichedLineItems,
       };
       
@@ -275,7 +286,7 @@ export function useInvoices() {
     return invoices.find(inv => inv.id === id);
   }, [invoices]);
 
-  const updateInvoice = useCallback(async (id: string, updatedData: Partial<Omit<Invoice, 'id' | 'createdBy' | 'createdByName'>>) => {
+  const updateInvoice = useCallback(async (id: string, updatedData: Partial<Omit<Invoice, 'id' | 'createdBy' | 'createdByName' | 'createdAt'>>) => {
     if (user?.activeRole === 'staff') {
         toast({ title: "Permission Denied", description: "You are not authorized to edit invoices.", variant: "destructive"});
         return;
@@ -284,8 +295,6 @@ export function useInvoices() {
         toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
         return;
     }
-    const originalInvoice = invoices.find(inv => inv.id === id);
-    if (!originalInvoice) return;
 
     const validationResult = invoiceServerObjectSchema.partial().safeParse(updatedData);
     if (!validationResult.success) {
@@ -295,92 +304,102 @@ export function useInvoices() {
     }
 
     try {
-      const batch = writeBatch(db);
-      const invoiceDocRef = doc(db, INVOICES_COLLECTION, id);
-      
-      if(updatedData.lineItems) {
-        const enrichedLineItems: LineItem[] = [];
-        for (const lineItem of updatedData.lineItems) {
-          let costPriceAtSale = lineItem.costPriceAtSale;
-          if (lineItem.type === 'product' && lineItem.inventoryItemId && costPriceAtSale === undefined) {
-              const itemDocRef = doc(db, INVENTORY_COLLECTION, lineItem.inventoryItemId);
-              const itemSnap = await getDoc(itemDocRef);
-              if (itemSnap.exists()) {
-                  costPriceAtSale = itemSnap.data().costPrice;
-              }
-          }
-          enrichedLineItems.push({...lineItem, id: lineItem.id || crypto.randomUUID(), costPriceAtSale });
+        const batch = writeBatch(db);
+        const invoiceDocRef = doc(db, INVOICES_COLLECTION, id);
+        
+        const originalInvoiceSnap = await getDoc(invoiceDocRef);
+        if (!originalInvoiceSnap.exists()) {
+            toast({ title: "Error", description: "Invoice not found.", variant: "destructive" });
+            return;
         }
-        updatedData.lineItems = enrichedLineItems;
-      }
+        const originalInvoice = originalInvoiceSnap.data() as Invoice;
+
+        const finalDataToUpdate = { ...validationResult.data };
+
+        const finalUpdateData = Object.assign({}, originalInvoice, finalDataToUpdate);
 
 
-      const stockAdjustments = new Map<string, number>();
-      originalInvoice.lineItems.forEach(item => {
-          if (item.inventoryItemId) {
-              stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) - item.quantity); // Re-add to stock
-          }
-      });
-      updatedData.lineItems?.forEach(item => {
-          if (item.inventoryItemId) {
-              stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) + item.quantity); // Remove from stock
-          }
-      });
-      
-      for (const [itemId, quantityChange] of stockAdjustments.entries()) {
-          if (quantityChange !== 0) {
-              const itemDocRef = doc(db, INVENTORY_COLLECTION, itemId);
-              const itemSnap = await getDoc(itemDocRef);
-              if (!itemSnap.exists()) {
-                  toast({ title: "Error", description: `Inventory item ${itemId} not found.`, variant: "destructive"});
-                  return;
+        if(finalUpdateData.lineItems) {
+            const enrichedLineItems: LineItem[] = [];
+            for (const lineItem of finalUpdateData.lineItems) {
+              let costPriceAtSale = lineItem.costPriceAtSale;
+              if (lineItem.type === 'product' && lineItem.inventoryItemId && costPriceAtSale === undefined) {
+                  const itemDocRef = doc(db, INVENTORY_COLLECTION, lineItem.inventoryItemId);
+                  const itemSnap = await getDoc(itemDocRef);
+                  if (itemSnap.exists()) {
+                      costPriceAtSale = itemSnap.data().costPrice;
+                  }
               }
-              const currentStock = itemSnap.data().quantity;
-              if (currentStock - quantityChange < 0) { // If subtracting stock makes it negative
-                  toast({ title: "Stock Unavailable", description: `Not enough stock for ${itemSnap.data().name}.`, variant: "destructive"});
-                  return;
-              }
-          }
-      }
+              enrichedLineItems.push({...lineItem, id: lineItem.id || crypto.randomUUID(), costPriceAtSale });
+            }
+            finalUpdateData.lineItems = enrichedLineItems;
+        }
 
-      for (const [itemId, quantityChange] of stockAdjustments.entries()) {
-          if (quantityChange !== 0) {
-              const itemDocRef = doc(db, INVENTORY_COLLECTION, itemId);
-              batch.update(itemDocRef, { quantity: increment(-quantityChange) }); // use negative to correctly decrement stock
-          }
-      }
+        const stockAdjustments = new Map<string, number>();
+        originalInvoice.lineItems.forEach(item => {
+            if (item.inventoryItemId) {
+                stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) + item.quantity); 
+            }
+        });
+        finalUpdateData.lineItems?.forEach((item: LineItem) => {
+            if (item.inventoryItemId) {
+                stockAdjustments.set(item.inventoryItemId, (stockAdjustments.get(item.inventoryItemId) || 0) - item.quantity); 
+            }
+        });
 
-      const newTotal = calculateTotal(updatedData as Invoice);
-      const amountPaid = calculatePaid(originalInvoice);
-      let newStatus: InvoiceStatus = 'Unpaid';
-      if (amountPaid >= newTotal) {
-          newStatus = 'Paid';
-      } else if (amountPaid > 0) {
-          newStatus = 'Partially Paid';
-      }
+        for (const [itemId, quantityChange] of stockAdjustments.entries()) {
+            if (quantityChange !== 0) {
+                const itemDocRef = doc(db, INVENTORY_COLLECTION, itemId);
+                const itemSnap = await getDoc(itemDocRef);
+                if (!itemSnap.exists()) {
+                    toast({ title: "Error", description: `Inventory item ${itemId} not found.`, variant: "destructive"});
+                    return;
+                }
+                const currentStock = itemSnap.data().quantity;
+                if (currentStock - quantityChange < 0) {
+                    toast({ title: "Stock Unavailable", description: `Not enough stock for ${itemSnap.data().name}.`, variant: "destructive"});
+                    return;
+                }
+            }
+        }
 
-      const finalUpdateData = cleanDataForFirebase({
-          ...updatedData, status: newStatus,
-          lineItems: updatedData.lineItems?.map(item => ({...item, id: item.id || crypto.randomUUID()}))
-      });
-      batch.update(invoiceDocRef, finalUpdateData);
+        for (const [itemId, quantityChange] of stockAdjustments.entries()) {
+            if (quantityChange !== 0) {
+                const itemDocRef = doc(db, INVENTORY_COLLECTION, itemId);
+                batch.update(itemDocRef, { quantity: increment(quantityChange) }); 
+            }
+        }
 
-      const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
-      usersSnapshot.docs.forEach(userDoc => {
-          if (userDoc.id !== user.uid) {
-              const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
-              batch.set(notificationRef, {
-                  recipientUid: userDoc.id, senderName: user.username,
-                  messageKey: 'notifications.invoices.updated',
-                  messageParams: { user: user.username, invoiceId: id },
-                  link: `/invoice/${id}`, read: false, createdAt: serverTimestamp(), type: 'invoice'
-              });
-          }
-      });
+        const newTotal = calculateTotal(finalUpdateData as Invoice);
+        const amountPaid = calculatePaid(originalInvoice);
+        let newStatus: InvoiceStatus = 'Unpaid';
+        if (amountPaid >= newTotal) {
+            newStatus = 'Paid';
+        } else if (amountPaid > 0) {
+            newStatus = 'Partially Paid';
+        }
+        finalUpdateData.status = newStatus;
+        
+        delete (finalUpdateData as any).createdAt;
 
-      await batch.commit();
-      toast({ title: "Invoice Updated", description: `Invoice ${id} has been successfully updated.` });
-      router.push(`/invoice/${id}`);
+        batch.update(invoiceDocRef, cleanDataForFirebase(finalUpdateData));
+
+        const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner'])));
+        usersSnapshot.docs.forEach(userDoc => {
+            if (userDoc.id !== user.uid) {
+                const notificationRef = doc(collection(db, NOTIFICATIONS_COLLECTION));
+                batch.set(notificationRef, {
+                    recipientUid: userDoc.id, senderName: user.username,
+                    messageKey: 'notifications.invoices.updated',
+                    messageParams: { user: user.username, invoiceId: id },
+                    link: `/invoice/${id}`, read: false, createdAt: serverTimestamp(), type: 'invoice'
+                });
+            }
+        });
+
+        await batch.commit();
+        toast({ title: "Invoice Updated", description: `Invoice ${id} has been successfully updated.` });
+        router.push(`/invoice/${id}`);
     } catch (error) {
         console.error("Error updating invoice:", error);
         toast({ title: "Error", description: "Failed to update invoice.", variant: "destructive" });

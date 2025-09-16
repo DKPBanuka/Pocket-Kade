@@ -172,7 +172,7 @@ export default function InvoiceDetailPage() {
                                   </DialogDescription>
                               </DialogHeader>
                               <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
-                                  <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
+                                  <div className="print-this-invoice mx-auto my-auto w-[794px] print:w-[210mm] bg-white shadow-lg light">
                                       <TemplateToRender
                                           invoice={invoice}
                                           organization={organization}
@@ -233,7 +233,7 @@ export default function InvoiceDetailPage() {
                           <DialogDescription>This is how your invoice will look when printed.</DialogDescription>
                       </DialogHeader>
                       <div className="flex-1 overflow-auto bg-muted/50 p-4 sm:p-8 print-scroll-wrapper">
-                          <div className="print-this-invoice mx-auto my-auto w-[800px] bg-white shadow-lg light">
+                          <div className="print-this-invoice mx-auto my-auto w-[794px] print:w-[210mm] bg-white shadow-lg light">
                               <TemplateToRender invoice={invoice} organization={organization} invoiceColor={organization?.invoiceColor} />
                           </div>
                       </div>

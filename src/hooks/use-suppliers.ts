@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import type { Supplier } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { supplierServerSchema } from '@/lib/schemas';
 
@@ -43,8 +43,6 @@ export function useSuppliers() {
             normalizedCreatedAt = new Date(ts.seconds * 1000).toISOString();
           } else if (typeof ts === 'string' && !isNaN(new Date(ts).getTime())) {
             normalizedCreatedAt = ts;
-          } else if (doc.metadata.hasPendingWrites) {
-            normalizedCreatedAt = new Date().toISOString();
           } else {
             normalizedCreatedAt = new Date().toISOString();
           }
@@ -89,7 +87,7 @@ export function useSuppliers() {
     try {
       await addDoc(collection(db, SUPPLIERS_COLLECTION), {
         ...validationResult.data,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
       toast({
         title: "Supplier Added",
@@ -119,11 +117,18 @@ export function useSuppliers() {
 
     const supplierDocRef = doc(db, SUPPLIERS_COLLECTION, id);
     try {
-      await updateDoc(supplierDocRef, validationResult.data);
-      toast({
-        title: "Supplier Updated",
-        description: `Supplier has been successfully updated.`,
-      });
+      const docSnap = await getDoc(supplierDocRef);
+      if (docSnap.exists()) {
+        const existingData = docSnap.data();
+        const finalData = Object.assign({}, existingData, validationResult.data);
+        await updateDoc(supplierDocRef, finalData);
+        toast({
+          title: "Supplier Updated",
+          description: `Supplier has been successfully updated.`,
+        });
+      } else {
+        throw new Error("Supplier document not found");
+      }
     } catch (error) {
       console.error("Error updating supplier:", error);
       toast({ title: "Error", description: "Failed to update supplier.", variant: "destructive" });

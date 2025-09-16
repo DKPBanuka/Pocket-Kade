@@ -60,7 +60,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The auth context will handle user creation/redirect
+      // The auth context will handle new user creation/redirect
       toast({ title: "Signed In with Google!", description: "Welcome to Pocket Kade." });
       router.push('/');
     } catch(err: any) {
@@ -81,95 +81,103 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-            <Logo />
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline">{t('login.title')}</CardTitle>
-            <CardDescription>{t('login.desc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
-                    {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
-                    Sign in with Google
-                </Button>
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">
-                        {t('login.or_continue')}
-                        </span>
-                    </div>
-                </div>
+    <main className="flex min-h-screen w-full items-center justify-center bg-muted/30 p-4">
+        <div className="w-full max-w-md">
+            <div className="mb-8 flex justify-center">
+                <Logo />
             </div>
-            <form onSubmit={handleLogin} className="space-y-6 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">{t('login.email_label')}</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="user@example.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                  />
+            <Card>
+            <CardHeader>
+                <CardTitle className="text-2xl font-headline">{t('login.title')}</CardTitle>
+                <CardDescription>{t('login.desc')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isGoogleLoading}>
+                        {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
+                        Sign in with Google
+                    </Button>
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-card px-2 text-muted-foreground">
+                            {t('login.or_continue')}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">{t('login.password_label')}</Label>
-                <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <form onSubmit={handleLogin} className="space-y-6 mt-4">
+                <div className="space-y-2">
+                    <Label htmlFor="email">{t('login.email_label')}</Label>
+                    <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
-                      id="password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
+                        id="email"
+                        type="email"
+                        placeholder="user@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
                     />
+                    </div>
                 </div>
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('login.login_btn')}
-              </Button>
-            </form>
-            <div className="mt-4 text-center text-sm">
-                {t('login.no_account')}{" "}
-                <Link href="/signup" className="underline">
-                    {t('login.signup_link')}
-                </Link>
-            </div>
-             <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  or
-                </span>
-              </div>
-            </div>
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">{t('login.password_label')}</Label>
+                        <Link
+                            href="/forgot-password"
+                            className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
+                        >
+                            Forgot Password?
+                        </Link>
+                    </div>
+                    <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                        id="password"
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10"
+                        />
+                    </div>
+                </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('login.login_btn')}
+                </Button>
+                </form>
+                <div className="mt-4 text-center text-sm">
+                    {t('login.no_account')}{" "}
+                    <Link href="/signup" className="underline">
+                        {t('login.signup_link')}
+                    </Link>
+                </div>
+                <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                    or
+                    </span>
+                </div>
+                </div>
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleGuestLogin}
-            >
-              {t('login.guest_btn')}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleGuestLogin}
+                >
+                {t('login.guest_btn')}
+                </Button>
+            </CardContent>
+            </Card>
+        </div>
+    </main>
   );
 }

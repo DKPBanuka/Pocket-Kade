@@ -39,7 +39,6 @@ export function useExpenses() {
             if (typeof ts.toDate === 'function') return ts.toDate().toISOString();
             if (typeof ts.seconds === 'number') return new Date(ts.seconds * 1000).toISOString();
             if (typeof ts === 'string' && !isNaN(new Date(ts).getTime())) return ts;
-            if (doc.metadata.hasPendingWrites) return new Date().toISOString();
             return new Date().toISOString();
           }
 
@@ -87,8 +86,7 @@ export function useExpenses() {
     try {
       await addDoc(collection(db, EXPENSES_COLLECTION), {
         ...validationResult.data,
-        date: new Date(validationResult.data.date), // Store as Firestore timestamp
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
       toast({ title: "Expense Added", description: `The expense has been added.` });
     } catch (error) {
@@ -125,7 +123,7 @@ export function useExpenses() {
       const finalDataToUpdate: any = { ...validationResult.data };
       
       if (finalDataToUpdate.date) {
-        finalDataToUpdate.date = new Date(finalDataToUpdate.date);
+        finalDataToUpdate.date = new Date(finalDataToUpdate.date).toISOString();
       }
       
       await updateDoc(expenseDocRef, finalDataToUpdate);

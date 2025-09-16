@@ -3,8 +3,6 @@
 
 import { suggestLineItem } from '@/ai/flows/suggest-line-item';
 import type { SuggestLineItemInput, SuggestLineItemOutput } from '@/ai/flows/suggest-line-item';
-import { forecastSales } from '@/ai/flows/forecast-sales-flow';
-import type { SalesDataInput, SalesForecastOutput } from '@/ai/flows/forecast-sales-flow';
 import {
   collection,
   addDoc,
@@ -18,7 +16,8 @@ import {
   getDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import type { UserRole } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { updateUserProfileSchema, organizationSettingsSchema, organizationThemeSchema, organizationInvoiceSettingsSchema } from '@/lib/schemas';
@@ -31,13 +30,6 @@ export async function suggestLineItemAction(
   // Add any server-side validation or logic here
   return await suggestLineItem(input);
 }
-
-export async function forecastSalesAction(
-  input: SalesDataInput
-): Promise<SalesForecastOutput> {
-  return await forecastSales(input);
-}
-
 
 export async function createInvitationAction(
   email: string,
@@ -83,15 +75,27 @@ export async function getInvitationDetailsAction(
     }
 
     const invitationDoc = snapshot.docs[0];
-    const invitation = { id: invitationDoc.id, ...invitationDoc.data() };
+    const invitationData = invitationDoc.data() as any;
+    const invitation = { id: invitationDoc.id, ...invitationData } as { id: string; email?: string; role?: UserRole; createdAt?: any };
     
     // Check if expired (e.g., > 24 hours)
-    const createdAt = invitation.createdAt.toDate();
-    if (new Date().getTime() - createdAt.getTime() > 24 * 60 * 60 * 1000) {
-        return { success: false, error: 'This invitation has expired.' };
+    // Safely normalize createdAt (can be Firestore Timestamp, ISO string, or missing)
+    const rawCreatedAt: any = invitation.createdAt;
+    let createdAt: Date | null = null;
+    if (rawCreatedAt && typeof rawCreatedAt.toDate === 'function') {
+      createdAt = rawCreatedAt.toDate();
+    } else if (rawCreatedAt && typeof rawCreatedAt.seconds === 'number') {
+      createdAt = new Date(rawCreatedAt.seconds * 1000);
+    } else if (typeof rawCreatedAt === 'string') {
+      const parsed = new Date(rawCreatedAt);
+      if (!isNaN(parsed.getTime())) createdAt = parsed;
+    }
+    // If we have a valid date, enforce 24h expiry; otherwise, skip expiry check
+    if (createdAt && (Date.now() - createdAt.getTime() > 24 * 60 * 60 * 1000)) {
+      return { success: false, error: 'This invitation has expired.' };
     }
 
-    return { success: true, invitation: { email: invitation.email, role: invitation.role } };
+    return { success: true, invitation: { email: invitation.email || '', role: invitation.role || 'staff' as UserRole } };
   } catch (error) {
     console.error('Error getting invitation:', error);
     return { success: false, error: 'An unexpected error occurred.' };
@@ -302,5 +306,22 @@ export async function deleteSampleProductForTour(
   } catch (error) {
     console.error('Error deleting sample product:', error);
     return { success: false, error: 'Could not delete sample product.' };
+  }
+}
+
+export async function sendPasswordResetEmailAction(
+  email: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error sending password reset email:', error);
+    if (error.code === 'auth/user-not-found') {
+        // To prevent user enumeration, we don't tell the user that the email doesn't exist.
+        // The success message on the client will handle this.
+        return { success: true };
+    }
+    return { success: false, error: 'Failed to send password reset email. Please try again later.' };
   }
 }

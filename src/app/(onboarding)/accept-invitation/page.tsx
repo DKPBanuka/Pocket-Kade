@@ -151,7 +151,7 @@ function AcceptInvitationContent() {
 
 export default function AcceptInvitationPage() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
             <div className="w-full max-w-md space-y-6">
                 <div className="flex justify-center">
                     <Logo />
@@ -160,6 +160,6 @@ export default function AcceptInvitationPage() {
                     <AcceptInvitationContent />
                 </Suspense>
             </div>
-        </div>
+        </main>
     );
 }

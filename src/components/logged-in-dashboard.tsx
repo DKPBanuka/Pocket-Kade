@@ -14,8 +14,9 @@ import { Bar, BarChart, Line, LineChart, Tooltip, XAxis, YAxis, ResponsiveContai
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { Invoice, LineItem } from '@/lib/types';
 import { useInventory } from '@/hooks/use-inventory';
-import { forecastSalesAction } from '@/app/actions';
+import { forecastSales } from '@/ai/flows/forecast-sales-flow';
 import { useLanguage } from '@/contexts/language-context';
+import AIAssistantDialog from './ai-assistant-dialog';
 
 
 const formatCurrency = (amount: number) => `Rs.${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -162,7 +163,7 @@ function SalesForecast({ invoices }: { invoices: Invoice[] }) {
         setError(null);
         setForecast(null);
         try {
-            const result = await forecastSalesAction({ salesData: salesDataForForecast, locale });
+            const result = await forecastSales({ salesData: salesDataForForecast, locale });
             setForecast(result.forecast);
         } catch (err) {
             console.error(err);
@@ -373,6 +374,7 @@ export default function LoggedInDashboard() {
   }
 
   return (
+    <>
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
       <div>
         <h1 className="text-3xl font-bold font-headline tracking-tight">
@@ -415,5 +417,7 @@ export default function LoggedInDashboard() {
         </div>
       </div>
     </div>
+    {user?.activeRole === 'owner' && <AIAssistantDialog />}
+    </>
   );
 }

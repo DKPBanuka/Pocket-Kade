@@ -41,12 +41,41 @@ const prompt = ai.definePrompt({
       isSinhala: z.boolean(),
   })},
   output: {schema: SalesForecastOutputSchema},
-  prompt: `You are a business analytics expert. Your task is to analyze the following daily revenue data (based on actual payments received) and provide a sales forecast for the next 30 days.
-The response must be in {{#if isSinhala}}Sinhala{{else}}English{{/if}}.
+  prompt: `You are a business analytics expert. Analyze the following daily revenue data (based on actual payments received) and produce a 30‑day sales projection.
+The response must be in {{#if isSinhala}}Sinhala{{else}}English{{/if}} and easy for a busy shop owner to skim.
 
-Provide a detailed analysis. Look for trends (upward, downward, stable), weekly patterns (e.g., higher sales on weekends), or any other notable observations.
-Based on your analysis, generate a clear, concise, and insightful forecast. Mention a potential revenue range (e.g., Rs. 100,000 - Rs. 120,000) for the next month.
-The forecast should be written in a friendly, advisory tone.
+Output requirements (use clear headings and bullet points):
+
+1) KPI Snapshot
+- Show 7/14/28‑day averages, total revenue, median, best day, worst day
+- Show average daily growth rate and volatility (stability indicator)
+
+2) Trends & Patterns
+- Identify trend direction (up/down/flat) and weekly seasonality (weekends vs weekdays)
+- Point out outliers and any recent momentum shift
+
+3) Forecast Method (brief)
+- Use a simple, explainable approach (e.g., moving averages + recent trend/exponential smoothing)
+- State assumptions and uncertainty in plain language
+
+4) 30‑Day Projection
+- Give a realistic revenue range for the next 30 days (e.g., Rs. 100,000 – Rs. 120,000)
+- Provide a compact table:
+  Date Range | Expected Daily Avg | Expected Total | Confidence
+  Summarize by weeks (Week 1..Week 4/5) instead of 30 lines
+
+5) What To Do Next (Actionable Tips)
+- Pricing/discount ideas for slow days, marketing suggestions for peak days
+- Inventory guidance (stock more of fast movers, reduce slow movers)
+- Cash‑flow notes (e.g., keep buffer if volatility is high)
+
+6) Friendly Summary
+- One short paragraph that a shop owner can read in 10 seconds
+
+Style guide:
+- {{#if isSinhala}}Use simple Sinhala words, keep it friendly and practical{{else}}Be concise, friendly, and practical{{/if}}
+- Prefer short sentences, bullet points, and small tables
+- Avoid technical jargon; explain any metric in everyday terms
 
 Historical Daily Revenue Data:
 {{#each salesData}}

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import type { Customer } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { customerServerSchema } from '@/lib/schemas';
 
@@ -42,8 +42,6 @@ export function useCustomers() {
             normalizedCreatedAt = new Date(ts.seconds * 1000).toISOString();
           } else if (typeof ts === 'string' && !isNaN(new Date(ts).getTime())) {
             normalizedCreatedAt = ts;
-          } else if (doc.metadata.hasPendingWrites) {
-            normalizedCreatedAt = new Date().toISOString();
           } else {
             normalizedCreatedAt = new Date().toISOString();
           }
@@ -89,7 +87,7 @@ export function useCustomers() {
     try {
       await addDoc(collection(db, CUSTOMERS_COLLECTION), {
         ...validationResult.data,
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
       });
       toast({
         title: "Customer Added",
@@ -119,11 +117,18 @@ export function useCustomers() {
     
     const customerDocRef = doc(db, CUSTOMERS_COLLECTION, id);
     try {
-      await updateDoc(customerDocRef, validationResult.data);
-      toast({
-        title: "Customer Updated",
-        description: `Customer has been successfully updated.`,
-      });
+      const docSnap = await getDoc(customerDocRef);
+      if (docSnap.exists()) {
+        const existingData = docSnap.data();
+        const finalData = Object.assign({}, existingData, validationResult.data);
+        await updateDoc(customerDocRef, finalData);
+        toast({
+          title: "Customer Updated",
+          description: `Customer has been successfully updated.`,
+        });
+      } else {
+        throw new Error("Customer document not found");
+      }
     } catch (error) {
       console.error("Error updating customer:", error);
       toast({ title: "Error", description: "Failed to update customer.", variant: "destructive" });

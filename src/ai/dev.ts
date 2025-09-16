@@ -2,3 +2,4 @@
 // Next.js automatically handles loading environment variables from .env files.
 import '@/ai/flows/suggest-line-item.ts';
 import '@/ai/flows/forecast-sales-flow.ts';
+import '@/ai/flows/business-analyst-flow.ts';

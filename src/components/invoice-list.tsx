@@ -56,7 +56,9 @@ export default function InvoiceList({ invoices }: InvoiceListProps) {
             <CardContent className="flex items-end justify-between text-sm">
                 <div>
                     <p className="text-muted-foreground">Invoice Date</p>
-                    <p className="font-medium">{format(new Date(invoice.createdAt), 'PPP')}</p>
+                    <p className="font-medium">
+                        {invoice.createdAt ? format(new Date(invoice.createdAt), 'PPP') : 'Syncing...'}
+                    </p>
                 </div>
                 <div className="text-right">
                     <p className="text-muted-foreground">Total</p>

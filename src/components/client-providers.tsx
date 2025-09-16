@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/contexts/auth-context';
 import { LanguageProvider } from '@/contexts/language-context';
 import { ChatProvider } from '@/contexts/chat-context';
+import { AIProvider } from '@/contexts/ai-context';
 import AppShell from '@/components/app-shell';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -19,8 +20,10 @@ export default function ClientProviders({ children }: { children: React.ReactNod
             <AuthProvider>
               <LanguageProvider>
                 <ChatProvider>
-                  <AppShell>{children}</AppShell>
-                  <Toaster />
+                  <AIProvider>
+                    <AppShell>{children}</AppShell>
+                    <Toaster />
+                  </AIProvider>
                 </ChatProvider>
               </LanguageProvider>
             </AuthProvider>

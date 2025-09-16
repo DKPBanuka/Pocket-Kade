@@ -7,7 +7,7 @@ import type { ReturnItem } from '@/lib/types';
 import { useInventory } from './use-inventory';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, limit, getDocs, where, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, query, orderBy, limit, getDocs, where, writeBatch, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/contexts/auth-context';
 import { returnServerSchema, updateReturnServerSchema } from '@/lib/schemas';
 
@@ -42,37 +42,19 @@ export function useReturns() {
         const returnsData: ReturnItem[] = snapshot.docs.map(doc => {
           const data = doc.data();
 
-          const createdAtTs = data.createdAt;
-          let normalizedCreatedAt: string;
-          if (createdAtTs && typeof createdAtTs.toDate === 'function') {
-            normalizedCreatedAt = createdAtTs.toDate().toISOString();
-          } else if (createdAtTs && typeof createdAtTs.seconds === 'number') {
-            normalizedCreatedAt = new Date(createdAtTs.seconds * 1000).toISOString();
-          } else if (typeof createdAtTs === 'string' && !isNaN(new Date(createdAtTs).getTime())) {
-            normalizedCreatedAt = createdAtTs;
-          } else if (doc.metadata.hasPendingWrites) {
-            normalizedCreatedAt = new Date().toISOString();
-          } else {
-            normalizedCreatedAt = new Date().toISOString();
+          const normalizeTimestamp = (ts: any): string => {
+            if (!ts) return new Date().toISOString();
+            if (typeof ts.toDate === 'function') return ts.toDate().toISOString();
+            if (typeof ts.seconds === 'number') return new Date(ts.seconds * 1000).toISOString();
+            if (typeof ts === 'string' && !isNaN(new Date(ts).getTime())) return ts;
+            return new Date().toISOString();
           }
 
-          const resolutionDateTs = data.resolutionDate;
-          let normalizedResolutionDate: string | undefined = undefined;
-          if (resolutionDateTs) {
-             if (resolutionDateTs && typeof resolutionDateTs.toDate === 'function') {
-                normalizedResolutionDate = resolutionDateTs.toDate().toISOString();
-            } else if (resolutionDateTs && typeof resolutionDateTs.seconds === 'number') {
-                normalizedResolutionDate = new Date(resolutionDateTs.seconds * 1000).toISOString();
-            } else if (typeof resolutionDateTs === 'string' && !isNaN(new Date(resolutionDateTs).getTime())) {
-                normalizedResolutionDate = resolutionDateTs;
-            }
-          }
-          
           return {
             id: doc.id,
             ...data,
-            createdAt: normalizedCreatedAt,
-            resolutionDate: normalizedResolutionDate,
+            createdAt: normalizeTimestamp(data.createdAt),
+            resolutionDate: data.resolutionDate ? normalizeTimestamp(data.resolutionDate) : undefined,
           } as ReturnItem;
         });
         setReturns(returnsData);
@@ -141,7 +123,7 @@ export function useReturns() {
         const newReturn: Omit<ReturnItem, 'id'> = {
           ...validationResult.data,
           returnId: newReturnId,
-          createdAt: new Date().toISOString(), // This will be replaced by serverTimestamp
+          createdAt: new Date().toISOString(),
           inventoryItemName: inventoryItem.name,
           status: 'Awaiting Inspection',
           createdBy: user.uid,
@@ -215,7 +197,14 @@ export function useReturns() {
         updatePayload.resolutionDate = serverTimestamp();
       }
 
-      batch.update(returnDocRef, updatePayload);
+      const docSnap = await getDoc(returnDocRef);
+      if (docSnap.exists()) {
+        const existingData = docSnap.data();
+        const finalData = Object.assign({}, existingData, updatePayload);
+        batch.update(returnDocRef, finalData);
+      } else {
+        throw new Error("Return document not found");
+      }
 
       const usersSnapshot = await getDocs(query(collection(db, USERS_COLLECTION), where(`tenants.${user.activeTenantId}`, 'in', ['admin', 'owner', 'staff'])));
       
